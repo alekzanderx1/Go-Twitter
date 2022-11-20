@@ -9,13 +9,25 @@
 		<h2>Following</h2>
 		<ul>
 			{{range .FollowingList}}
-				<li>{{ .Name }} - {{ .Username}} </li>
+				<li>{{.Name }} ({{ .Username }}) 
+					<form method="POST" action="/unfollow">
+						<input type="hidden" name="username" value="{{ .Username}}">
+						<input type="submit" value="Unfollow">
+					</form>
+
+				</li>
 			{{end}}
 		</ul>
 		<h2>Suggested Users</h2>
 		<ul>
 			{{range .FollowList}}
-				<li>{{ .Name }} - {{ .Username}} </li>
+				<li>{{.Name }} ({{ .Username }}) 
+					<form method="POST" action="/follow">
+						<input type="hidden" name="username" value="{{ .Username}}">
+						<input type="submit" value="Follow">
+					</form>
+
+				</li>
 			{{end}}
 		</ul>
 	</body> 

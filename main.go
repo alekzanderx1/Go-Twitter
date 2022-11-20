@@ -34,6 +34,7 @@ func signupRequestHandler(res http.ResponseWriter, req *http.Request) {
 	temp.Username = username
 	temp.password = password
 	temp.Name = name
+	temp.following = make(map[string]struct{})
 	users[username] = temp
 	http.ServeFile(res, req, "./static/login.html")
 }
@@ -117,6 +118,7 @@ func usersListHandler(res http.ResponseWriter, req *http.Request) {
 
 
 func newTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
+	// Throw error for Guest 
 	tweet := req.FormValue("tweet")
 	temp := users[loggedInUser]
 	temp.posts = append(temp.posts, tweet)
@@ -127,8 +129,24 @@ func newTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func myTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
+	// Redirect to Login for Guest 
 	tp1.ExecuteTemplate(res, "MyTweets.html", users[loggedInUser].posts)
 }
+
+func followUserHandler(res http.ResponseWriter, req *http.Request) {
+	// Throw error for Guest and Not POST
+	username := req.FormValue("username")
+	users[loggedInUser].following[username] = struct{}{}
+	usersListHandler(res,req)
+}
+
+func unfollowUserHandler(res http.ResponseWriter, req *http.Request) {
+	//Throw error for Guest and Not POST
+	username := req.FormValue("username")
+	delete(users[loggedInUser].following,username)
+	usersListHandler(res,req)
+}
+
 
 func main() {
 	tp1, _ = tp1.ParseGlob("static/*.html")
@@ -145,6 +163,8 @@ func main() {
 	http.HandleFunc("/feed", userFeedHandler)
 	
 	http.HandleFunc("/users", usersListHandler)
+	http.HandleFunc("/follow", followUserHandler)
+	http.HandleFunc("/unfollow", unfollowUserHandler)
 
 	http.HandleFunc("/tweet", newTweetRequestHandler)
 	http.HandleFunc("/mytweets", myTweetRequestHandler)
