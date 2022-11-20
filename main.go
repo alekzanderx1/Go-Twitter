@@ -97,7 +97,7 @@ func usersListHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func logoutHandler(res http.ResponseWriter, req *http.Request) {
-	loggedInUser = ""
+	loggedInUser = "Guest"
 	http.ServeFile(res, req, "./static/index.html")
 }
 
@@ -113,26 +113,27 @@ func newTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
 
 // myTweetRequestHandler
 func myTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
-
 	tp1.ExecuteTemplate(res, "MyTweets.html", users[loggedInUser].posts)
-
 }
 
 func main() {
 	tp1, _ = tp1.ParseGlob("static/*.html")
 	http.Handle("/", http.FileServer(http.Dir("./static")))
+	
 	http.HandleFunc("/signup", signupPage)
-	http.HandleFunc("/login", loginPage)
-	http.HandleFunc("/feed", userFeedHandler)
-
-	http.HandleFunc("/logout", logoutHandler)
-	http.HandleFunc("/users", usersListHandler)
 	http.HandleFunc("/signupre", signupRequestHandler)
+	
+	http.HandleFunc("/login", loginPage)
 	http.HandleFunc("/loginre", loginRequestHandler)
+	
+	http.HandleFunc("/logout", logoutHandler)
+	
+	http.HandleFunc("/feed", userFeedHandler)
+	
+	http.HandleFunc("/users", usersListHandler)
+
 	http.HandleFunc("/tweet", newTweetRequestHandler)
-	//mytweets
 	http.HandleFunc("/mytweets", myTweetRequestHandler)
 
 	http.ListenAndServe(":8080", nil)
-
 }
