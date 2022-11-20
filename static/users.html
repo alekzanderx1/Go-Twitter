@@ -6,10 +6,16 @@
 		<a href="/logout">Logout</a>
 	</head>
 	<body>
-		<h2>Follow or Unfollow Users</h2>
+		<h2>Following</h2>
 		<ul>
-			{{range .}}
-				<li>{{ .Username }} </li>
+			{{range .FollowingList}}
+				<li>{{ .Name }} - {{ .Username}} </li>
+			{{end}}
+		</ul>
+		<h2>Suggested Users</h2>
+		<ul>
+			{{range .FollowList}}
+				<li>{{ .Name }} - {{ .Username}} </li>
 			{{end}}
 		</ul>
 	</body> 

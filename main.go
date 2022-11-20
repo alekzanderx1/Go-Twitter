@@ -13,11 +13,11 @@ type User struct {
 	Username  string
 	Name 	  string
 	password  string
-	following []string
+	following map[string]struct{}
 	posts     []string
 }
 
-var loggedInUser string
+var loggedInUser = "Guest"
 var tp1 *template.Template
 
 func signupRequestHandler(res http.ResponseWriter, req *http.Request) {
@@ -40,8 +40,8 @@ func signupRequestHandler(res http.ResponseWriter, req *http.Request) {
 
 func signupPage(res http.ResponseWriter, req *http.Request) {
 	http.ServeFile(res, req, "./static/signup.html")
-
 }
+
 func loginRequestHandler(res http.ResponseWriter, req *http.Request) {
 	if req.Method != "POST" {
 		http.Error(res, "Method Not Supported", http.StatusMethodNotAllowed)
@@ -68,7 +68,6 @@ func loginRequestHandler(res http.ResponseWriter, req *http.Request) {
 		// User doesn't exist, prompt Signup
 		http.ServeFile(res, req, "./static/signup.html")
 	}
-
 }
 
 func loginPage(res http.ResponseWriter, req *http.Request) {
@@ -76,32 +75,46 @@ func loginPage(res http.ResponseWriter, req *http.Request) {
 
 }
 
-func userFeedHandler(res http.ResponseWriter, req *http.Request) {
-	tp1.ExecuteTemplate(res, "userfeed.html", loggedInUser)
-
-}
-
-func usersListHandler(res http.ResponseWriter, req *http.Request) {
-
-	type UserListItem struct {
-		Username  string
-	}
-
-	var userList []UserListItem
-	for user, _ := range users {
-		if user != loggedInUser {
-			userList = append(userList, UserListItem{Username: user})
-		}
-	}
-
-	tp1.ExecuteTemplate(res, "users.html", userList)
-
-}
-
 func logoutHandler(res http.ResponseWriter, req *http.Request) {
 	loggedInUser = "Guest"
 	http.ServeFile(res, req, "./static/index.html")
 }
+
+func userFeedHandler(res http.ResponseWriter, req *http.Request) {
+	tp1.ExecuteTemplate(res, "userfeed.html", loggedInUser)
+}
+
+func usersListHandler(res http.ResponseWriter, req *http.Request) {
+	type UserListItem struct {
+		Username  string
+		Name string
+	}
+
+	type Data struct {
+		FollowingList []UserListItem
+		FollowList []UserListItem
+	}
+
+	var followingUserList []UserListItem
+	var followUserList []UserListItem
+
+	following := users[loggedInUser].following
+
+	for user, details := range users {
+		if user != loggedInUser {
+			_, follows  := following[user]
+			if follows == true {
+				followingUserList = append(followingUserList, UserListItem{Username: user, Name: details.Name})
+			} else {
+				followUserList = append(followUserList, UserListItem{Username: user, Name: details.Name})
+			}
+		}
+	}
+
+	data := Data{FollowingList:followingUserList,FollowList:followUserList}
+	tp1.ExecuteTemplate(res, "users.html", &data)
+}
+
 
 func newTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
 	tweet := req.FormValue("tweet")
@@ -113,7 +126,6 @@ func newTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
 
 }
 
-// myTweetRequestHandler
 func myTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
 	tp1.ExecuteTemplate(res, "MyTweets.html", users[loggedInUser].posts)
 }
