@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"reflect"
 )
 
 var users = make(map[string]User)
@@ -12,20 +11,25 @@ var users = make(map[string]User)
 type User struct {
 	Username  string
 	password  string
-	followers [3]string
-	posts     [5]string
+	following [] string
+	posts     [] string
 }
 
-var loggeduser string
+type UserListItem struct {
+	Username  string
+	following  bool
+}
+
+var loggedInUser string
 var tp1 *template.Template
 
-//users := make(map[string]int)
 
 func signuprequest(res http.ResponseWriter, req *http.Request) {
 	if req.Method != "POST" {
-		http.ServeFile(res, req, "signup.html")
-		return
+		http.Error(res, "Method Not Supported", http.StatusMethodNotAllowed)
+        return
 	}
+
 	username := req.FormValue("username")
 	password := req.FormValue("password")
 	temp := users[username]
@@ -33,7 +37,6 @@ func signuprequest(res http.ResponseWriter, req *http.Request) {
 	temp.Username = username
 	temp.password = password
 	users[username] = temp
-	fmt.Println(users)
 	http.ServeFile(res, req, "./static/login.html")
 }
 
@@ -41,34 +44,30 @@ func signupPage(res http.ResponseWriter, req *http.Request) {
 	http.ServeFile(res, req, "./static/signup.html")
 
 }
-func loginrequest(res http.ResponseWriter, req *http.Request) {
+func loginRequestHandler(res http.ResponseWriter, req *http.Request) {
 	if req.Method != "POST" {
-		http.ServeFile(res, req, "signup.html")
-		return
+		http.Error(res, "Method Not Supported", http.StatusMethodNotAllowed)
+        return
 	}
+	
 	username := req.FormValue("username")
 	password := req.FormValue("password")
-	if _, ok := users[username]; ok {
+	if _, exists := users[username]; exists {
 		fmt.Println(users[username])
 		fmt.Println(password)
 		temp := users[username]
 		result1 := temp.password == password
 		if result1 {
-
 			fmt.Println("Login Success")
-			loggeduser = username
-
-			tp1.ExecuteTemplate(res, "welcome.html", loggeduser)
-
+			loggedInUser = username
+			tp1.ExecuteTemplate(res, "userfeed.html", loggedInUser)
 		} else {
 			http.ServeFile(res, req, "./static/login.html")
 			fmt.Println("Incorrect password")
-
 		}
 
 	} else {
-		fmt.Println("No user")
-
+		// User doesn't exist, prompt Signup
 		http.ServeFile(res, req, "./static/signup.html")
 
 	}
@@ -79,30 +78,41 @@ func loginPage(res http.ResponseWriter, req *http.Request) {
 	http.ServeFile(res, req, "./static/login.html")
 
 }
-func userslist(res http.ResponseWriter, req *http.Request) {
 
-	//var name = "bappi"
-	fmt.Println(users)
-	keys := reflect.ValueOf(users).MapKeys()
-	type temp struct{
-		people [] string
+func userFeedHandler(res http.ResponseWriter, req *http.Request) {
+	tp1.ExecuteTemplate(res, "userfeed.html", loggedInUser)
+
+}
+
+func usersListHandler(res http.ResponseWriter, req *http.Request) {
+	
+	var userList []UserListItem
+	for user, _ := range users {
+		if user != loggedInUser {
+			userList = append(userList, UserListItem{Username:user})
+		}
 	}
-	peeps:=temp(
-		people:=keys,
-	)
-	tp1.ExecuteTemplate(res, "usersfeed.html", temp)
 
+	tp1.ExecuteTemplate(res, "users.html", userList)
+
+}
+
+func logoutHandler(res http.ResponseWriter, req *http.Request) {
+	loggedInUser = ""
+	http.ServeFile(res, req, "./static/index.html")
 }
 
 func main() {
 	tp1, _ = tp1.ParseGlob("static/*.html")
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 	http.HandleFunc("/signup", signupPage)
-	http.HandleFunc("/signupre", signuprequest)
-	http.HandleFunc("/loginre", loginrequest)
-	http.HandleFunc("/users", userslist)
-
+	http.HandleFunc("/users", usersListHandler)
 	http.HandleFunc("/login", loginPage)
+	http.HandleFunc("/logout", logoutHandler)
+	http.HandleFunc("/feed", userFeedHandler)
+
+	http.HandleFunc("/signupre", signuprequest)
+	http.HandleFunc("/loginre", loginRequestHandler)
 	http.ListenAndServe(":8080", nil)
 
 }

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<a href="/feed">Timeline</a>
+		<a href="/logout">Logout</a>
+	</head>
+	<body>
+		<h2>Follow or Unfollow Users</h2>
+		<ul>
+			{{range .}}
+				<li>{{ .Username }} </li>
+			{{end}}
+		</ul>
+	</body> 
+</html>
