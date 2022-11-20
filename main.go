@@ -24,7 +24,7 @@ var loggedInUser string
 var tp1 *template.Template
 
 
-func signuprequest(res http.ResponseWriter, req *http.Request) {
+func signupRequestHandler(res http.ResponseWriter, req *http.Request) {
 	if req.Method != "POST" {
 		http.Error(res, "Method Not Supported", http.StatusMethodNotAllowed)
         return
@@ -69,7 +69,6 @@ func loginRequestHandler(res http.ResponseWriter, req *http.Request) {
 	} else {
 		// User doesn't exist, prompt Signup
 		http.ServeFile(res, req, "./static/signup.html")
-
 	}
 
 }
@@ -106,12 +105,12 @@ func main() {
 	tp1, _ = tp1.ParseGlob("static/*.html")
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 	http.HandleFunc("/signup", signupPage)
-	http.HandleFunc("/users", usersListHandler)
 	http.HandleFunc("/login", loginPage)
-	http.HandleFunc("/logout", logoutHandler)
 	http.HandleFunc("/feed", userFeedHandler)
 
-	http.HandleFunc("/signupre", signuprequest)
+	http.HandleFunc("/logout", logoutHandler)
+	http.HandleFunc("/users", usersListHandler)
+	http.HandleFunc("/signupre", signupRequestHandler)
 	http.HandleFunc("/loginre", loginRequestHandler)
 	http.ListenAndServe(":8080", nil)
 
