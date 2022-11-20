@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	// unable to import time package @syed take a look
 )
 
 var users = make(map[string]User)
@@ -11,23 +12,22 @@ var users = make(map[string]User)
 type User struct {
 	Username  string
 	password  string
-	following [] string
-	posts     [] string
+	following []string
+	posts     []string
 }
 
 type UserListItem struct {
 	Username  string
-	following  bool
+	following bool
 }
 
 var loggedInUser string
 var tp1 *template.Template
 
-
 func signupRequestHandler(res http.ResponseWriter, req *http.Request) {
 	if req.Method != "POST" {
 		http.Error(res, "Method Not Supported", http.StatusMethodNotAllowed)
-        return
+		return
 	}
 
 	username := req.FormValue("username")
@@ -47,9 +47,9 @@ func signupPage(res http.ResponseWriter, req *http.Request) {
 func loginRequestHandler(res http.ResponseWriter, req *http.Request) {
 	if req.Method != "POST" {
 		http.Error(res, "Method Not Supported", http.StatusMethodNotAllowed)
-        return
+		return
 	}
-	
+
 	username := req.FormValue("username")
 	password := req.FormValue("password")
 	if _, exists := users[username]; exists {
@@ -84,11 +84,11 @@ func userFeedHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func usersListHandler(res http.ResponseWriter, req *http.Request) {
-	
+
 	var userList []UserListItem
 	for user, _ := range users {
 		if user != loggedInUser {
-			userList = append(userList, UserListItem{Username:user})
+			userList = append(userList, UserListItem{Username: user})
 		}
 	}
 
@@ -99,6 +99,23 @@ func usersListHandler(res http.ResponseWriter, req *http.Request) {
 func logoutHandler(res http.ResponseWriter, req *http.Request) {
 	loggedInUser = ""
 	http.ServeFile(res, req, "./static/index.html")
+}
+
+func newTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
+	tweet := req.FormValue("tweet")
+	temp := users[loggedInUser]
+	temp.posts = append(temp.posts, tweet)
+	users[loggedInUser] = temp
+	fmt.Println(users)
+	tp1.ExecuteTemplate(res, "MyTweets.html", users[loggedInUser].posts)
+
+}
+
+// myTweetRequestHandler
+func myTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
+
+	tp1.ExecuteTemplate(res, "MyTweets.html", users[loggedInUser].posts)
+
 }
 
 func main() {
@@ -112,6 +129,10 @@ func main() {
 	http.HandleFunc("/users", usersListHandler)
 	http.HandleFunc("/signupre", signupRequestHandler)
 	http.HandleFunc("/loginre", loginRequestHandler)
+	http.HandleFunc("/tweet", newTweetRequestHandler)
+	//mytweets
+	http.HandleFunc("/mytweets", myTweetRequestHandler)
+
 	http.ListenAndServe(":8080", nil)
 
 }

@@ -3,8 +3,17 @@
 <head>
     <a href="/users">Users</a>
     <a href="/logout">Logout</a>
+	<a href="/mytweets">My Tweets</a>
+
 </head>
 <body>
     <h1>Welcome {{.}}</h1>
+
+    <form method="POST" action="/tweet">
+        
+        <label for="tweet">Make a Tweet</label>
+        <input type="text" placeholder="Tweet something..." name="tweet"><br><br>
+        <input type="submit" value="Tweet">
+    </form>
 </body>
 </html>
