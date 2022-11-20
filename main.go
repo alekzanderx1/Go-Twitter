@@ -11,14 +11,10 @@ var users = make(map[string]User)
 
 type User struct {
 	Username  string
+	Name 	  string
 	password  string
 	following []string
 	posts     []string
-}
-
-type UserListItem struct {
-	Username  string
-	following bool
 }
 
 var loggedInUser string
@@ -32,10 +28,12 @@ func signupRequestHandler(res http.ResponseWriter, req *http.Request) {
 
 	username := req.FormValue("username")
 	password := req.FormValue("password")
+	name := req.FormValue("name")
 	temp := users[username]
 
 	temp.Username = username
 	temp.password = password
+	temp.Name = name
 	users[username] = temp
 	http.ServeFile(res, req, "./static/login.html")
 }
@@ -84,6 +82,10 @@ func userFeedHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func usersListHandler(res http.ResponseWriter, req *http.Request) {
+
+	type UserListItem struct {
+		Username  string
+	}
 
 	var userList []UserListItem
 	for user, _ := range users {
