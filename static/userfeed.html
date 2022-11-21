@@ -6,12 +6,20 @@
     <a href="/logout">Logout</a>
 </head>
 <body>
-    <h1>Welcome {{.}}</h1>
+    <h1>Hi, {{.Username}}</h1>
 
     <form method="POST" action="/tweet">
         <label for="tweet">Make a Tweet</label>
         <input type="text" placeholder="Tweet something..." name="tweet"><br><br>
         <input type="submit" value="Tweet">
     </form>
+
+    <h2>Latest Tweets by your friends</h2>
+    <ul>
+        {{range .Tweets}}
+            <li>{{.Username}} says "{{.Text}}"" </li>
+        {{end}}
+    </ul>
+
 </body>
 </html>

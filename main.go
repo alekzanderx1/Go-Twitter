@@ -11,7 +11,7 @@ var users = make(map[string]User)
 
 type User struct {
 	Username  string
-	Name 	  string
+	Name      string
 	password  string
 	following map[string]struct{}
 	posts     []string
@@ -59,7 +59,7 @@ func loginRequestHandler(res http.ResponseWriter, req *http.Request) {
 		if result1 {
 			fmt.Println("Login Success")
 			loggedInUser = username
-			tp1.ExecuteTemplate(res, "userfeed.html", loggedInUser)
+			userFeedHandler(res, req)
 		} else {
 			http.ServeFile(res, req, "./static/login.html")
 			fmt.Println("Incorrect password")
@@ -82,18 +82,39 @@ func logoutHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func userFeedHandler(res http.ResponseWriter, req *http.Request) {
-	tp1.ExecuteTemplate(res, "userfeed.html", loggedInUser)
+	type Tweet struct {
+		Text     string
+		Username string
+	}
+
+	type Data struct {
+		Username string
+		Tweets   []Tweet
+	}
+
+	var tweets []Tweet
+
+	following := users[loggedInUser].following
+
+	for friend, _ := range following {
+		for _, tweet := range users[friend].posts {
+			tweets = append(tweets, Tweet{Text: tweet, Username: friend})
+		}
+	}
+
+	data := Data{Username: loggedInUser, Tweets: tweets}
+	tp1.ExecuteTemplate(res, "userfeed.html", data)
 }
 
 func usersListHandler(res http.ResponseWriter, req *http.Request) {
 	type UserListItem struct {
-		Username  string
-		Name string
+		Username string
+		Name     string
 	}
 
 	type Data struct {
 		FollowingList []UserListItem
-		FollowList []UserListItem
+		FollowList    []UserListItem
 	}
 
 	var followingUserList []UserListItem
@@ -103,7 +124,7 @@ func usersListHandler(res http.ResponseWriter, req *http.Request) {
 
 	for user, details := range users {
 		if user != loggedInUser {
-			_, follows  := following[user]
+			_, follows := following[user]
 			if follows == true {
 				followingUserList = append(followingUserList, UserListItem{Username: user, Name: details.Name})
 			} else {
@@ -112,13 +133,12 @@ func usersListHandler(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	data := Data{FollowingList:followingUserList,FollowList:followUserList}
+	data := Data{FollowingList: followingUserList, FollowList: followUserList}
 	tp1.ExecuteTemplate(res, "users.html", &data)
 }
 
-
 func newTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
-	// Throw error for Guest 
+	// Throw error for Guest
 	tweet := req.FormValue("tweet")
 	temp := users[loggedInUser]
 	temp.posts = append(temp.posts, tweet)
@@ -129,7 +149,7 @@ func newTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func myTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
-	// Redirect to Login for Guest 
+	// Redirect to Login for Guest
 	tp1.ExecuteTemplate(res, "MyTweets.html", users[loggedInUser].posts)
 }
 
@@ -137,31 +157,30 @@ func followUserHandler(res http.ResponseWriter, req *http.Request) {
 	// Throw error for Guest and Not POST
 	username := req.FormValue("username")
 	users[loggedInUser].following[username] = struct{}{}
-	usersListHandler(res,req)
+	usersListHandler(res, req)
 }
 
 func unfollowUserHandler(res http.ResponseWriter, req *http.Request) {
 	//Throw error for Guest and Not POST
 	username := req.FormValue("username")
-	delete(users[loggedInUser].following,username)
-	usersListHandler(res,req)
+	delete(users[loggedInUser].following, username)
+	usersListHandler(res, req)
 }
-
 
 func main() {
 	tp1, _ = tp1.ParseGlob("static/*.html")
 	http.Handle("/", http.FileServer(http.Dir("./static")))
-	
+
 	http.HandleFunc("/signup", signupPage)
 	http.HandleFunc("/signupre", signupRequestHandler)
-	
+
 	http.HandleFunc("/login", loginPage)
 	http.HandleFunc("/loginre", loginRequestHandler)
-	
+
 	http.HandleFunc("/logout", logoutHandler)
-	
+
 	http.HandleFunc("/feed", userFeedHandler)
-	
+
 	http.HandleFunc("/users", usersListHandler)
 	http.HandleFunc("/follow", followUserHandler)
 	http.HandleFunc("/unfollow", unfollowUserHandler)
@@ -169,5 +188,6 @@ func main() {
 	http.HandleFunc("/tweet", newTweetRequestHandler)
 	http.HandleFunc("/mytweets", myTweetRequestHandler)
 
+	//http.ListenAndServe("0.0.0.0:8000", nil)
 	http.ListenAndServe(":8080", nil)
 }
