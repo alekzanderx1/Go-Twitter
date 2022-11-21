@@ -7,7 +7,8 @@ import (
 	// unable to import time package @syed take a look
 )
 
-var users = make(map[string]User)
+
+// Definition of Structs for Data storage
 
 type User struct {
 	Username  string
@@ -17,21 +18,23 @@ type User struct {
 	posts     []string
 }
 
+type Tweet struct {
+	Text     string
+	Username string
+}
+
+
+// In memory non-persistent storage 
+
+var users = make(map[string]User)
 var loggedInUser = "Guest"
 var tp1 *template.Template
 
-func adddummy() {
-	a := users["bappi"]
-	a.Username = "bappi"
-	a.password = "test"
-	a.Name = "bharath"
-	a.following = make(map[string]struct{})
-	users["bappi"] = a
 
-}
-func UserExists(username string) bool {
-	//adding dummy for unit test cases.
 
+// Authentication Methods
+
+func userExists(username string) bool {
 	if _, exists := users[username]; exists {
 		return true
 	} else {
@@ -39,7 +42,20 @@ func UserExists(username string) bool {
 	}
 
 }
-func AddNewUser(username string, password string, name string) bool {
+
+func authenticate(username string, password string) bool {
+	temp := users[username]
+	result1 := temp.password == password
+	if result1 {
+		return true
+	} else {
+
+		return false
+	}
+
+}
+
+func addNewUser(username string, password string, name string) bool {
 
 	temp := users[username]
 	temp.Username = username
@@ -47,14 +63,18 @@ func AddNewUser(username string, password string, name string) bool {
 	temp.Name = name
 	temp.following = make(map[string]struct{})
 	users[username] = temp
-	if UserExists(username) {
+	if userExists(username) {
 		return true
 	} else {
 		return false
 	}
 }
+
+func signupPage(res http.ResponseWriter, req *http.Request) {
+	http.ServeFile(res, req, "./static/signup.html")
+}
+
 func signupRequestHandler(res http.ResponseWriter, req *http.Request) {
-	//fmt.Println(req)
 	if req.Method != "POST" {
 		http.Error(res, "Method Not Supported", http.StatusMethodNotAllowed)
 		return
@@ -62,10 +82,10 @@ func signupRequestHandler(res http.ResponseWriter, req *http.Request) {
 
 	username := req.FormValue("username")
 
-	if !UserExists(username) {
+	if !userExists(username) {
 		password := req.FormValue("password")
 		name := req.FormValue("name")
-		if AddNewUser(username, password, name) {
+		if addNewUser(username, password, name) {
 			http.ServeFile(res, req, "./static/login.html")
 		} else {
 			http.Error(res, "Something went wrong", http.StatusConflict)
@@ -77,22 +97,10 @@ func signupRequestHandler(res http.ResponseWriter, req *http.Request) {
 
 }
 
-func signupPage(res http.ResponseWriter, req *http.Request) {
-	http.ServeFile(res, req, "./static/signup.html")
+func loginPage(res http.ResponseWriter, req *http.Request) {
+	http.ServeFile(res, req, "./static/login.html")
 }
 
-func authenticate(username string, password string) bool {
-
-	temp := users[username]
-	result1 := temp.password == password
-	if result1 {
-		return true
-	} else {
-
-		return false
-	}
-
-}
 func loginRequestHandler(res http.ResponseWriter, req *http.Request) {
 	if req.Method != "POST" {
 		http.Error(res, "Method Not Supported", http.StatusMethodNotAllowed)
@@ -106,10 +114,7 @@ func loginRequestHandler(res http.ResponseWriter, req *http.Request) {
 		return
 
 	}
-	if UserExists(username) {
-		fmt.Println(users[username])
-		fmt.Println(password)
-
+	if userExists(username) {
 		if authenticate(username, password) {
 			fmt.Println("Login Success")
 			loggedInUser = username
@@ -126,39 +131,65 @@ func loginRequestHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func loginPage(res http.ResponseWriter, req *http.Request) {
-	http.ServeFile(res, req, "./static/login.html")
-
-}
-
 func logoutHandler(res http.ResponseWriter, req *http.Request) {
 	loggedInUser = "Guest"
 	http.ServeFile(res, req, "./static/index.html")
 }
 
-func userFeedHandler(res http.ResponseWriter, req *http.Request) {
-	type Tweet struct {
-		Text     string
-		Username string
-	}
 
-	type Data struct {
-		Username string
-		Tweets   []Tweet
-	}
 
+// User Timeline Methods
+
+func getTimelineForUser(user string) []Tweet {
 	var tweets []Tweet
 
-	following := users[loggedInUser].following
-
+	following := users[user].following
 	for friend, _ := range following {
 		for _, tweet := range users[friend].posts {
 			tweets = append(tweets, Tweet{Text: tweet, Username: friend})
 		}
 	}
 
-	data := Data{Username: loggedInUser, Tweets: tweets}
+	return tweets
+}
+
+func userFeedHandler(res http.ResponseWriter, req *http.Request) {
+	type TemplateData struct {
+		Username string
+		Tweets   []Tweet
+	}
+
+	tweets := getTimelineForUser(loggedInUser)
+	data := TemplateData{Username: loggedInUser, Tweets: tweets}
 	tp1.ExecuteTemplate(res, "userfeed.html", data)
+}
+
+
+
+// User Follower Methods
+
+func followUser(username string) {
+	users[loggedInUser].following[username] = struct{}{}
+}
+
+func unfollowUser(username string) {
+	delete(users[loggedInUser].following, username)
+}
+
+func getUserFollowers() map[string]struct{} {
+	return users[loggedInUser].following
+}
+
+func followUserHandler(res http.ResponseWriter, req *http.Request) {
+	username := req.FormValue("username")
+	followUser(username)
+	usersListHandler(res, req)
+}
+
+func unfollowUserHandler(res http.ResponseWriter, req *http.Request) {
+	username := req.FormValue("username")
+	unfollowUser(username)
+	usersListHandler(res, req)
 }
 
 func usersListHandler(res http.ResponseWriter, req *http.Request) {
@@ -167,7 +198,7 @@ func usersListHandler(res http.ResponseWriter, req *http.Request) {
 		Name     string
 	}
 
-	type Data struct {
+	type TemplateData struct {
 		FollowingList []UserListItem
 		FollowList    []UserListItem
 	}
@@ -175,7 +206,7 @@ func usersListHandler(res http.ResponseWriter, req *http.Request) {
 	var followingUserList []UserListItem
 	var followUserList []UserListItem
 
-	following := users[loggedInUser].following
+	following := getUserFollowers()
 
 	for user, details := range users {
 		if user != loggedInUser {
@@ -188,45 +219,36 @@ func usersListHandler(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	data := Data{FollowingList: followingUserList, FollowList: followUserList}
+	data := TemplateData{FollowingList: followingUserList, FollowList: followUserList}
 	tp1.ExecuteTemplate(res, "users.html", &data)
 }
 
-func AddNewTweet(tweet string) {
-	//tweet := req.FormValue("tweet")
+
+
+// User Tweet Methods 
+
+func addNewTweet(tweet string) {
 	temp := users[loggedInUser]
 	temp.posts = append(temp.posts, tweet)
 	users[loggedInUser] = temp
+}
 
+func getUserTweets() []string {
+	return users[loggedInUser].posts
 }
 
 func newTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
-	// Throw error for Guest
 	tweet := req.FormValue("tweet")
-	AddNewTweet(tweet)
-	fmt.Println(users)
+	addNewTweet(tweet)
 	tp1.ExecuteTemplate(res, "MyTweets.html", users[loggedInUser].posts)
 
 }
 
 func myTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
-	// Redirect to Login for Guest
-	tp1.ExecuteTemplate(res, "MyTweets.html", users[loggedInUser].posts)
+	tp1.ExecuteTemplate(res, "MyTweets.html", getUserTweets())
 }
 
-func followUserHandler(res http.ResponseWriter, req *http.Request) {
-	// Throw error for Guest and Not POST
-	username := req.FormValue("username")
-	users[loggedInUser].following[username] = struct{}{}
-	usersListHandler(res, req)
-}
 
-func unfollowUserHandler(res http.ResponseWriter, req *http.Request) {
-	//Throw error for Guest and Not POST
-	username := req.FormValue("username")
-	delete(users[loggedInUser].following, username)
-	usersListHandler(res, req)
-}
 
 func main() {
 

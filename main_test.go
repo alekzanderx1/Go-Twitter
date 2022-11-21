@@ -6,44 +6,19 @@ import (
 	"testing"
 )
 
-func TestLoginRequestHandler(t *testing.T) {
-	req, err := http.NewRequest("POST", "/loginre", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if req == nil {
-		t.Error("Something went wrong")
-	}
-
-}
-
-//signupRequestHandler
-
-func TestSignupRequestHandler(t *testing.T) {
-	req, err := http.NewRequest("POST", "/signupre", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if req == nil {
-		t.Error("Something went wrong")
-	}
-	fmt.Println(req)
-}
-
-func TestAuthenticate(t *testing.T) {
-	adddummy()
-	username := "bappi"
-	password := "test"
-
-	if !authenticate(username, password) {
-		t.Error("Something went wrong")
-	}
+func setup() {
+	a := users["bappi"]
+	a.Username = "bappi"
+	a.password = "test"
+	a.Name = "bharath"
+	a.following = make(map[string]struct{})
+	users["bappi"] = a
 }
 
 func TestUserExists(t *testing.T) {
-	adddummy()
+	setup()
 	username := "bappi"
-	if !UserExists(username) {
+	if !userExists(username) {
 		t.Error("Something went wrong")
 	}
 }
@@ -52,28 +27,67 @@ func TestAddNewUser(t *testing.T) {
 	a := "addusertest1"
 	b := "password"
 	c := "name"
-	if !AddNewUser(a, b, c) {
+	if !addNewUser(a, b, c) {
 		t.Error("Something went wrong")
 	}
-
 }
+
+func TestAuthentication(t *testing.T) {
+	setup()
+	username := "bappi"
+	password := "test"
+
+	if !authenticate(username, password) {
+		t.Error("Test Authentication Failed")
+	}
+
+	invalidUsername := "syed"
+	invalidPassword := "syed123"
+	if authenticate(invalidUsername, invalidPassword) {
+		t.Error("Test invalid Authentication Failed")
+	}
+}
+
 func TestAddNewTweet(t *testing.T) {
 	tweet := "test"
-	adddummy()
+	setup()
 	loggedInUser = "bappi"
 	f := 0
 
-	AddNewTweet(tweet)
-	//tweet = "test2"
-	temp := users[loggedInUser]
+	addNewTweet(tweet)
+	temp := getUserTweets()
 	for _, v := range temp.posts {
 		if v == tweet {
 			f = 1
 			break
 		}
 	}
+
 	if f == 0 {
-		t.Error("Something went wrong")
+		t.Error("Test Add new Tweet Failed")
 	}
 
 }
+
+func Test(t *testing.T) {
+	tweet := "test"
+	setup()
+	loggedInUser = "bappi"
+	f := 0
+
+	addNewTweet(tweet)
+	temp := getUserTweets()
+	for _, v := range temp.posts {
+		if v == tweet {
+			f = 1
+			break
+		}
+	}
+
+	if f == 0 {
+		t.Error("Test Add new Tweet Failed")
+	}
+
+}
+
+
