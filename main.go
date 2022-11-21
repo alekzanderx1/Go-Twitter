@@ -20,29 +20,79 @@ type User struct {
 var loggedInUser = "Guest"
 var tp1 *template.Template
 
+func adddummy() {
+	a := users["bappi"]
+	a.Username = "bappi"
+	a.password = "test"
+	a.Name = "bharath"
+	a.following = make(map[string]struct{})
+	users["bappi"] = a
+
+}
+func UserExists(username string) bool {
+	//adding dummy for unit test cases.
+
+	if _, exists := users[username]; exists {
+		return true
+	} else {
+		return false
+	}
+
+}
+func AddNewUser(username string, password string, name string) bool {
+
+	temp := users[username]
+	temp.Username = username
+	temp.password = password
+	temp.Name = name
+	temp.following = make(map[string]struct{})
+	users[username] = temp
+	if UserExists(username) {
+		return true
+	} else {
+		return false
+	}
+}
 func signupRequestHandler(res http.ResponseWriter, req *http.Request) {
+	//fmt.Println(req)
 	if req.Method != "POST" {
 		http.Error(res, "Method Not Supported", http.StatusMethodNotAllowed)
 		return
 	}
 
 	username := req.FormValue("username")
-	password := req.FormValue("password")
-	name := req.FormValue("name")
-	temp := users[username]
 
-	temp.Username = username
-	temp.password = password
-	temp.Name = name
-	temp.following = make(map[string]struct{})
-	users[username] = temp
-	http.ServeFile(res, req, "./static/login.html")
+	if !UserExists(username) {
+		password := req.FormValue("password")
+		name := req.FormValue("name")
+		if AddNewUser(username, password, name) {
+			http.ServeFile(res, req, "./static/login.html")
+		} else {
+			http.Error(res, "Something went wrong", http.StatusConflict)
+		}
+
+	} else {
+		http.Error(res, "Username Exists", http.StatusConflict)
+	}
+
 }
 
 func signupPage(res http.ResponseWriter, req *http.Request) {
 	http.ServeFile(res, req, "./static/signup.html")
 }
 
+func authenticate(username string, password string) bool {
+
+	temp := users[username]
+	result1 := temp.password == password
+	if result1 {
+		return true
+	} else {
+
+		return false
+	}
+
+}
 func loginRequestHandler(res http.ResponseWriter, req *http.Request) {
 	if req.Method != "POST" {
 		http.Error(res, "Method Not Supported", http.StatusMethodNotAllowed)
@@ -51,16 +101,21 @@ func loginRequestHandler(res http.ResponseWriter, req *http.Request) {
 
 	username := req.FormValue("username")
 	password := req.FormValue("password")
-	if _, exists := users[username]; exists {
+	if username == "" {
+		http.Error(res, "Wrong Format for username", http.StatusFailedDependency)
+		return
+
+	}
+	if UserExists(username) {
 		fmt.Println(users[username])
 		fmt.Println(password)
-		temp := users[username]
-		result1 := temp.password == password
-		if result1 {
+
+		if authenticate(username, password) {
 			fmt.Println("Login Success")
 			loggedInUser = username
 			userFeedHandler(res, req)
 		} else {
+
 			http.ServeFile(res, req, "./static/login.html")
 			fmt.Println("Incorrect password")
 		}
@@ -137,12 +192,18 @@ func usersListHandler(res http.ResponseWriter, req *http.Request) {
 	tp1.ExecuteTemplate(res, "users.html", &data)
 }
 
-func newTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
-	// Throw error for Guest
-	tweet := req.FormValue("tweet")
+func AddNewTweet(tweet string) {
+	//tweet := req.FormValue("tweet")
 	temp := users[loggedInUser]
 	temp.posts = append(temp.posts, tweet)
 	users[loggedInUser] = temp
+
+}
+
+func newTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
+	// Throw error for Guest
+	tweet := req.FormValue("tweet")
+	AddNewTweet(tweet)
 	fmt.Println(users)
 	tp1.ExecuteTemplate(res, "MyTweets.html", users[loggedInUser].posts)
 
@@ -168,6 +229,7 @@ func unfollowUserHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
+
 	tp1, _ = tp1.ParseGlob("static/*.html")
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 
