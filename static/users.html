@@ -1,34 +1,48 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<a href="/feed">Timeline</a>
-		<a href="/mytweets">My Tweets</a>
-		<a href="/logout">Logout</a>
+		<meta charset="UTF-8">
+		<title>Search Users</title>
+		<link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Rubik:400,700'>
+		<link rel="stylesheet" href="./style.css">
 	</head>
 	<body>
-		<h2>Following</h2>
-		<ul>
-			{{range .FollowingList}}
-				<li>{{.Name }} ({{ .Username }}) 
-					<form method="POST" action="/unfollow">
-						<input type="hidden" name="username" value="{{ .Username}}">
-						<input type="submit" value="Unfollow">
-					</form>
+		<div class="nav">
+			<ul>
+				<li><a href="/feed" class="nav-link">Timeline</a></li>
+				<li><a href="#!" class="nav-link-active">Users</a></li>
+				<li><a href="/mytweets" class="nav-link">My Tweets</a></li>
+				<li><a href="/logout" class="nav-link">Logout</a></li>
+			</ul>
+		</div>
+		</br>
+		<div class="content-box" style="color: white;">
+			<h2>Following</h2>
+			<ul class="users">
+				{{range .FollowingList}}
+					<li class="line">{{.Name }} ({{ .Username }}) 
+						<form method="POST" action="/unfollow">
+							<input type="hidden" name="username" value="{{ .Username}}">
+							<input type="submit" value="Unfollow">
+						</form>
 
-				</li>
-			{{end}}
-		</ul>
-		<h2>Suggested Users</h2>
-		<ul>
-			{{range .FollowList}}
-				<li>{{.Name }} ({{ .Username }}) 
-					<form method="POST" action="/follow">
-						<input type="hidden" name="username" value="{{ .Username}}">
-						<input type="submit" value="Follow">
-					</form>
+					</li>
+				{{end}}
+			</ul>
+			</br>
+			</br>
+			<h2>Suggested Users</h2>
+			<ul class="users">
+				{{range .FollowList}}
+					<li class="plus">{{.Name }} ({{ .Username }}) 
+						<form method="POST" action="/follow">
+							<input type="hidden" name="username" value="{{ .Username}}">
+							<input type="submit" value="Follow">
+						</form>
 
-				</li>
-			{{end}}
-		</ul>
+					</li>
+				{{end}}
+			</ul>
+		</div>
 	</body> 
 </html>

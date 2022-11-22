@@ -1,0 +1,265 @@
+html, body, div, p, ul, li {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 100%;
+    font: inherit;
+    vertical-align: baseline;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 100;
+  }
+  
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+  }
+  
+  body {
+    background: #e35869;
+    font-family: 'Rubik', sans-serif;
+  }
+  
+  .login-form {
+    background: #fff;
+    width: 500px;
+    margin: 65px auto;
+    display: -webkit-box;
+    display: flex;
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+            flex-direction: column;
+    border-radius: 4px;
+    box-shadow: 0 2px 25px rgba(0, 0, 0, 0.2);
+  }
+  .login-form h1 {
+    padding: 35px 35px 0 35px;
+    font-weight: 300;
+  }
+  .login-form h3 {
+    padding: 35px 35px 0 35px;
+    font-weight: 100;
+  }
+  .login-form .content {
+    padding: 35px;
+    text-align: center;
+  }
+  .login-form .input-field {
+    padding: 12px 5px;
+  }
+  .login-form .input-field input {
+    font-size: 16px;
+    display: block;
+    font-family: 'Rubik', sans-serif;
+    width: 100%;
+    padding: 10px 1px;
+    border: 0;
+    border-bottom: 1px solid #747474;
+    outline: none;
+    -webkit-transition: all .2s;
+    transition: all .2s;
+  }
+  .login-form .input-field input::-webkit-input-placeholder {
+    text-transform: uppercase;
+  }
+  .login-form .input-field input::-moz-placeholder {
+    text-transform: uppercase;
+  }
+  .login-form .input-field input:-ms-input-placeholder {
+    text-transform: uppercase;
+  }
+  .login-form .input-field input::-ms-input-placeholder {
+    text-transform: uppercase;
+  }
+  .login-form .input-field input::placeholder {
+    text-transform: uppercase;
+  }
+  .login-form .input-field input:focus {
+    border-color: #222;
+  }
+  .login-form a.link {
+    text-decoration: none;
+    color: #747474;
+    letter-spacing: 0.2px;
+    text-transform: uppercase;
+    display: inline-block;
+    margin-top: 20px;
+  }
+  .login-form .action {
+    display: -webkit-box;
+    display: flex;
+    -webkit-box-orient: horizontal;
+    -webkit-box-direction: normal;
+            flex-direction: row;
+  }
+  .login-form .action button {
+    width: 100%;
+    border: none;
+    padding: 18px;
+    font-family: 'Rubik', sans-serif;
+    cursor: pointer;
+    text-transform: uppercase;
+    background: #e8e9ec;
+    color: #777;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 0;
+    letter-spacing: 0.2px;
+    outline: 0;
+    -webkit-transition: all .3s;
+    transition: all .3s;
+  }
+  .login-form .action button:hover {
+    background: #d8d8d8;
+  }
+  .login-form .action button:nth-child(2) {
+    background: #2d3b55;
+    color: #fff;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 4px;
+  }
+  .login-form .action button:nth-child(2):hover {
+    background: #3c4d6d;
+  }
+  
+  /* This class is applied to the containing div <div class="nav"> and is used to set the background color and height of the navbar */
+  .nav {
+    background: #000;
+    height: 60px; /* set same as height & line-height below */
+  }
+  
+  /* This rule centers the nav items verticaly in the bar with the height and line height properties. Spacing between the nav items is controlled by setting right and left padding.  */
+  .nav li {
+    display: inline-block;
+    list-style: none;
+    height: 60px; /* should be the same as line-height */
+    line-height: 60px; /* should be the same as height */
+    padding: 0 40px; /* "0" sets top and bottom padding to none */
+  }
+  
+  /* :hover allows you change the background color of the nav items when you mouse over them. Play around with the transition value to change the speed of the hover transition. */
+  .nav li:hover {
+    background: red;
+    transition: background .3s;
+  }
+  
+  /* This rule is applied to the link <a> tag. It lets you turn off the link underline and set the link text color. */
+  .nav-link {
+    color: #fff;
+    text-decoration: none;
+  }
+  
+  .nav-link-active {
+    color: rgb(205, 17, 23);
+    text-decoration: none;
+  }
+  
+  .content-box {
+    position: absolute;
+    left: 50%;
+    top: 35%;
+    -webkit-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
+  }
+  
+  ul.tweets {
+    line-height: 1.5em;
+    margin: 5px 0 15px;
+    padding: 0;
+  }
+  
+  ul.tweets li {
+    list-style: none;
+    position: relative;
+    padding: 0 0 0 20px;
+  }
+  
+  ul.tweets li.arrow::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 6px;
+    height: 5px;
+    width: 5px;
+    border: 1px solid #f9dd94;
+    border-width: 2px 2px 0 0;
+    transform: rotate(45deg);
+  }
+  
+  ul.users {
+    line-height: 1.5em;
+    margin: 5px 0 15px;
+    padding: 0;
+  }
+  
+  ul.users li {
+    list-style: none;
+    position: relative;
+    padding: 0 0 0 20px;
+  }
+  
+  
+  ul.users li.plus::before  {
+    content: "";
+    position: absolute;
+    background: #f9dd94;
+    left: 0;
+    top: 9px;
+    height: 2px; 
+    width: 8px;
+  }
+  
+  ul.users li.plus::after { 
+    content: ""; 
+    position: absolute; 
+    background: #f9dd94;
+    left: 3px; 
+    top: 5px; 
+    height: 10px; 
+    width: 2px;
+  }
+  
+  ul.users li.line::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 9px;
+    width: 8px;
+    display: block;
+    border-top: 2px solid #f9dd94;
+  }
+  
+  ul.tweets2 {
+    line-height: 1.5em;
+    margin: 5px 0 15px;
+    padding: 0;
+  }
+  
+  ul.tweets2 li {
+    list-style: none;
+    position: relative;
+    padding: 0 0 0 20px;
+  }
+  
+  
+  ul.tweets2 li.heart::before, li.heart::after {
+    content: ""; 
+    position: absolute; 
+    left: 7px; 
+    top: 5px; 
+    width: 7px; 
+    height: 12px; 
+    background: #f9dd94;
+    border-radius: 50px 50px 0 0; 
+    transform: rotate(-45deg); 
+    transform-origin: 0 100%;
+  }
+  
+  ul.tweets2 li.heart::after {
+    content: ""; 
+    position: absolute; 
+    top: 5px; 
+    left: 0; 
+    transform: rotate(45deg); 
+    transform-origin: 100% 100%;
+  }

@@ -1,17 +1,29 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<a href="/users">Users</a>
-		<a href="/feed">Timeline</a>
-		<a href="/logout">Logout</a>
+		<meta charset="UTF-8">
+		<title>My Tweets</title>
+		<link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Rubik:400,700'>
+		<link rel="stylesheet" href="./style.css">
 	</head>
 	<body>
-
-		<h2>Tweet Feed</h2>
-		<ul>
-			{{range .}}
-				<li>{{ . }} </li>				
-			{{end}}
-		</ul>
+		<div class="nav">
+			<ul>
+				<li><a href="/feed" class="nav-link">Timeline</a></li>
+				<li><a href="/users" class="nav-link">Users</a></li>
+				<li><a href="#!" class="nav-link-active">My Tweets</a></li>
+				<li><a href="/logout" class="nav-link">Logout</a></li>
+			</ul>
+		</div>
+		</br>
+		<div class="content-box" style="color: white;">
+			<h2>My Tweet Feed</h2>
+			</br>
+			<ul class="tweets">
+				{{range .}}
+					<li class="arrow">"{{ . }}"</li>				
+				{{end}}
+			</ul>
+		</div>
 	</body> 
 </html>

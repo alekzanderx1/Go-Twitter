@@ -1,25 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <a href="/users">Users</a>
-	<a href="/mytweets">My Tweets</a>
-    <a href="/logout">Logout</a>
+    <meta charset="UTF-8">
+    <title>Timeline</title>
+    <link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Rubik:400,700'>
+    <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-    <h1>Hi, {{.Username}}</h1>
-
-    <form method="POST" action="/tweet">
-        <label for="tweet">Make a Tweet</label>
-        <input type="text" placeholder="Tweet something..." name="tweet"><br><br>
-        <input type="submit" value="Tweet">
-    </form>
-
-    <h2>Latest Tweets by your friends</h2>
-    <ul>
-        {{range .Tweets}}
-            <li>{{.Username}} says "{{.Text}}"" </li>
-        {{end}}
-    </ul>
-
+    <div class="nav">
+        <ul>
+          <li><a href="#!" class="nav-link-active">Timeline</a></li>
+          <li><a href="/users" class="nav-link">Users</a></li>
+          <li><a href="/mytweets" class="nav-link">My Tweets</a></li>
+          <li><a href="/logout" class="nav-link">Logout</a></li>
+        </ul>
+    </div>
+    </br>
+    </br>
+    <div class="content-box">
+        <div class="login-form">
+            <form method="POST" action="/tweet">
+                <h1>Hi, {{.Username}}</h1>
+                <!-- <label for="tweet">Make a Tweet</label> -->
+                <div class="input-field">
+                    <input type="text" placeholder="Tweet something..." name="tweet" size="50"><br><br>
+                </div>
+                <div class="action">
+                    <button type="submit" value="Tweet">Tweet</button>
+                </div>
+            </form>
+        </div>
+        </br>
+        <h2 style="color: white;">Latest Tweets by your friends</h2>
+        <ul class="tweets2" style="color: white;">
+            {{range .Tweets}}
+                <li class="heart">{{.Username}} tweeted "{{.Text}}" </li>
+            {{end}}
+        </ul>
+    </div>
 </body>
 </html>

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
 	"testing"
 )
 
@@ -28,7 +26,7 @@ func TestAddNewUser(t *testing.T) {
 	b := "password"
 	c := "name"
 	if !addNewUser(a, b, c) {
-		t.Error("Something went wrong")
+		t.Error("Test Add New User Failed")
 	}
 }
 
@@ -56,7 +54,7 @@ func TestAddNewTweet(t *testing.T) {
 
 	addNewTweet(tweet)
 	temp := getUserTweets()
-	for _, v := range temp.posts {
+	for _, v := range temp {
 		if v == tweet {
 			f = 1
 			break
@@ -68,26 +66,3 @@ func TestAddNewTweet(t *testing.T) {
 	}
 
 }
-
-func Test(t *testing.T) {
-	tweet := "test"
-	setup()
-	loggedInUser = "bappi"
-	f := 0
-
-	addNewTweet(tweet)
-	temp := getUserTweets()
-	for _, v := range temp.posts {
-		if v == tweet {
-			f = 1
-			break
-		}
-	}
-
-	if f == 0 {
-		t.Error("Test Add new Tweet Failed")
-	}
-
-}
-
-

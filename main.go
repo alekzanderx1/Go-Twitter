@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	// unable to import time package @syed take a look
 )
-
 
 // Definition of Structs for Data storage
 
@@ -23,14 +21,11 @@ type Tweet struct {
 	Username string
 }
 
-
-// In memory non-persistent storage 
+// In memory non-persistent storage
 
 var users = make(map[string]User)
 var loggedInUser = "Guest"
 var tp1 *template.Template
-
-
 
 // Authentication Methods
 
@@ -136,8 +131,6 @@ func logoutHandler(res http.ResponseWriter, req *http.Request) {
 	http.ServeFile(res, req, "./static/index.html")
 }
 
-
-
 // User Timeline Methods
 
 func getTimelineForUser(user string) []Tweet {
@@ -163,8 +156,6 @@ func userFeedHandler(res http.ResponseWriter, req *http.Request) {
 	data := TemplateData{Username: loggedInUser, Tweets: tweets}
 	tp1.ExecuteTemplate(res, "userfeed.html", data)
 }
-
-
 
 // User Follower Methods
 
@@ -223,9 +214,7 @@ func usersListHandler(res http.ResponseWriter, req *http.Request) {
 	tp1.ExecuteTemplate(res, "users.html", &data)
 }
 
-
-
-// User Tweet Methods 
+// User Tweet Methods
 
 func addNewTweet(tweet string) {
 	temp := users[loggedInUser]
@@ -248,10 +237,7 @@ func myTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
 	tp1.ExecuteTemplate(res, "MyTweets.html", getUserTweets())
 }
 
-
-
 func main() {
-
 	tp1, _ = tp1.ParseGlob("static/*.html")
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 
@@ -272,6 +258,5 @@ func main() {
 	http.HandleFunc("/tweet", newTweetRequestHandler)
 	http.HandleFunc("/mytweets", myTweetRequestHandler)
 
-	//http.ListenAndServe("0.0.0.0:8000", nil)
 	http.ListenAndServe(":8080", nil)
 }
