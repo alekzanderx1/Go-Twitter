@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+option go_package = "./";
+
+package users;
+
+message AddUserRequest {
+    string username = 1;
+    string name =2;
+    string password =3;
+}
+
+message AddUserResponse {
+    bool success = 1;
+}
+
+message GetFollowingRequest{
+    string username =1;
+}
+
+message GetFollowingResponse{
+    repeated string followers = 1;
+}
+
+message AddFollowerRequest{
+    string username = 1;
+    string follow = 2;
+}
+
+message AddFollowerResponse{
+    bool success = 1;
+}
+
+message RemoveFollowerRequest{
+    string username = 1;
+    string follow = 2;
+}
+
+message RemoveFollowerResponse{
+    bool success = 1;
+}
+
+message AuthenticateRequest{
+    string username = 1;
+    string password = 2;
+}
+
+message AuthenticateResponse{
+    bool success = 1;
+}
+
+
+service UserService{
+    rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse) {}
+    rpc AddNewUser(AddUserRequest) returns (AddUserResponse) {}
+    rpc GetFollowers(GetFollowingRequest) returns (GetFollowingResponse){}
+    rpc FollowUser(AddFollowerRequest) returns (AddFollowerResponse){}
+    rpc UnfollowUser(RemoveFollowerRequest) returns (RemoveFollowerResponse){}
+}

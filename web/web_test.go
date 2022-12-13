@@ -17,7 +17,12 @@ func TestUserExists(t *testing.T) {
 	setup()
 	username := "bappi"
 	if !userExists(username) {
-		t.Error("Something went wrong")
+		t.Error("User Exists Test Went Wrong")
+	}
+	username = "bappi_2"
+	if userExists(username) {
+		t.Error("User Exists Test Went Wrong")
+
 	}
 }
 
@@ -28,6 +33,16 @@ func TestAddNewUser(t *testing.T) {
 	if !addNewUser(a, b, c) {
 		t.Error("Test Add New User Failed")
 	}
+	setup()
+
+	//trying to add existing user
+	a = "bappi"
+	b = "test"
+	c = "bharath"
+	if addNewUser(a, b, c) {
+		t.Error("Test Add New User Failed, User Already Exists")
+	}
+
 }
 
 func TestAuthentication(t *testing.T) {
@@ -44,6 +59,12 @@ func TestAuthentication(t *testing.T) {
 	if authenticate(invalidUsername, invalidPassword) {
 		t.Error("Test invalid Authentication Failed")
 	}
+
+	//valid usernme and invalid password
+	if authenticate(username, invalidPassword) {
+		t.Error("Test invalid Authentication Failed")
+	}
+
 }
 
 func TestAddNewTweet(t *testing.T) {
@@ -63,6 +84,20 @@ func TestAddNewTweet(t *testing.T) {
 
 	if f == 0 {
 		t.Error("Test Add new Tweet Failed")
+
+	}
+	//Testing with tweet which is not tweet
+	f = 0
+	newtweet := "test_2"
+	for _, v := range temp {
+		if v == newtweet {
+			f = 1
+			break
+		}
+	}
+	if f == 1 {
+		t.Error("Unknown Tweet found")
+
 	}
 
 }
