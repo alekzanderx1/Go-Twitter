@@ -20,8 +20,8 @@
 			<h2>My Tweet Feed</h2>
 			</br>
 			<ul class="tweets">
-				{{range .}}
-					<li class="arrow">"{{ . }}"</li>				
+				{{range .Tweets}}
+					<li class="arrow">You tweeted "{{ .Text }}" on {{ .Timestamp}} </li>			
 				{{end}}
 			</ul>
 		</div>

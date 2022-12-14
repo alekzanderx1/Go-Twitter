@@ -50,12 +50,22 @@ func (s *Server) AddNewUser(ctx context.Context, in *AddUserRequest)  (*AddUserR
 func (s *Server)  GetFollowers(ctx context.Context, in *GetFollowingRequest)  (*GetFollowingResponse, error) {
 	following := data[in.Username].following
 	followingResponse := []string{}
+	suggestions := []string{}
 
-	for user, _ := range following { 
+	for user := range following { 
 		followingResponse = append(followingResponse,user)
 	}
 
-	return &GetFollowingResponse{Followers: followingResponse}, nil
+	for user := range data {
+		if user != in.Username {
+			_, follows := following[user]
+			if !follows {
+				suggestions = append(suggestions, user)
+			} 
+		}
+	}
+
+	return &GetFollowingResponse{Following: followingResponse, Suggestions: suggestions}, nil
 }
 
 func (s *Server)  FollowUser(ctx context.Context, in *AddFollowerRequest)  (*AddFollowerResponse, error) {

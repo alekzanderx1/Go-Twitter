@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"Twitter/users"
+	"Twitter/tweets"
 	"google.golang.org/grpc"
 )
 
@@ -15,9 +16,11 @@ func main() {
 	}
 
 	u := users.Server{}
+	t := tweets.Server{}
 	Server := grpc.NewServer()
 
 	users.RegisterUserServiceServer(Server, &u)
+	tweets.RegisterTweetsServiceServer(Server, &t)
 
 	if err := Server.Serve(lis); err != nil {
 		log.Fatalf("Failed to Listen to TCP: %s", err)

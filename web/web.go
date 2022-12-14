@@ -4,6 +4,7 @@ import (
 	"html/template"
 	"net/http"
 	"Twitter/users"
+	"Twitter/tweets"
 	"google.golang.org/grpc"
 	"log"
 	"context"
@@ -22,11 +23,11 @@ type User struct {
 type Tweet struct {
 	Text     string
 	Username string
+	Timestamp string
 }
 
-// In memory non-persistent storage
+// Local storage
 
-var data = make(map[string]User)
 var loggedInUser = "Guest"
 var tp1 *template.Template
 
@@ -103,31 +104,15 @@ func loginRequestHandler(res http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		log.Fatalf("Error when calling Authenticate: %s", err)
+		http.Error(res, "Something went wrong, please try again!", http.StatusConflict)
 	}
 
 	if !response.Success {
-		http.Error(res, "Authentication Failed", http.StatusConflict)
-		http.ServeFile(res, req, "./static/login.html")
+		http.Error(res, "Authentication Failed, please check username or password!", http.StatusConflict)
 	} else {
 		loggedInUser = username
 		userFeedHandler(res, req)
 	}
-
-	// if userExists(username) {
-	// 	if authenticate(username, password) {
-	// 		fmt.Println("Login Success")
-	// 		loggedInUser = username
-	// 		userFeedHandler(res, req)
-	// 	} else {
-
-	// 		http.ServeFile(res, req, "./static/login.html")
-	// 		fmt.Println("Incorrect password")
-	// 	}
-
-	// } else {
-	// 	// User doesn't exist, prompt Signup
-	// 	http.ServeFile(res, req, "./static/signup.html")
-	// }
 }
 
 func logoutHandler(res http.ResponseWriter, req *http.Request) {
@@ -137,17 +122,9 @@ func logoutHandler(res http.ResponseWriter, req *http.Request) {
 
 // User Timeline Methods
 
-func getTimelineForUser(user string) []Tweet {
-	var tweets []Tweet
-
-	following := data[user].following
-	for friend, _ := range following {
-		for _, tweet := range data[friend].posts {
-			tweets = append(tweets, Tweet{Text: tweet, Username: friend})
-		}
-	}
-
-	return tweets
+func getTimelineForUser(user string, res http.ResponseWriter, req *http.Request) []Tweet {
+	following := getUserFollowers(user, res, req).Following
+	return getTweetsForUsers(following, res, req)
 }
 
 func userFeedHandler(res http.ResponseWriter, req *http.Request) {
@@ -156,23 +133,70 @@ func userFeedHandler(res http.ResponseWriter, req *http.Request) {
 		Tweets   []Tweet
 	}
 
-	tweets := getTimelineForUser(loggedInUser)
+	tweets := getTimelineForUser(loggedInUser, res, req)
 	data := TemplateData{Username: loggedInUser, Tweets: tweets}
 	tp1.ExecuteTemplate(res, "userfeed.html", data)
 }
 
 // User Follower Methods
 
+func getUserFollowers(username string, res http.ResponseWriter, req *http.Request) (*users.GetFollowingResponse) {
+	var conn *grpc.ClientConn
+	conn, err := grpc.Dial(":9000", grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("Couldn't connect: %s", err)
+	}
+
+	u := users.NewUserServiceClient(conn)
+
+	response, err := u.GetFollowers(context.Background(), &users.GetFollowingRequest{
+		Username: loggedInUser,
+	})
+
+	if err != nil {
+		log.Fatalf("Error when calling GetFollowers: %s", err)
+		http.Error(res, "Something went wrong, please try again!", http.StatusConflict)
+	}
+
+	return response
+}
+
 func followUser(username string) {
-	data[loggedInUser].following[username] = struct{}{}
+	var conn *grpc.ClientConn
+	conn, err := grpc.Dial(":9000", grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("Couldn't connect: %s", err)
+	}
+
+	u := users.NewUserServiceClient(conn)
+
+	response, err := u.FollowUser(context.Background(), &users.AddFollowerRequest{
+		Username: loggedInUser,
+		Follow: username,
+	})
+
+	if err != nil || !response.Success{
+		log.Fatalf("Error when calling FollowUser: %s", err)
+	}
 }
 
 func unfollowUser(username string) {
-	delete(data[loggedInUser].following, username)
-}
+	var conn *grpc.ClientConn
+	conn, err := grpc.Dial(":9000", grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("Couldn't connect: %s", err)
+	}
 
-func getUserFollowers() map[string]struct{} {
-	return data[loggedInUser].following
+	u := users.NewUserServiceClient(conn)
+
+	response, err := u.UnfollowUser(context.Background(), &users.RemoveFollowerRequest{
+		Username: loggedInUser,
+		Follow: username,
+	})
+
+	if err != nil || !response.Success{
+		log.Fatalf("Error when calling UnfollowUser: %s", err)
+	}
 }
 
 func followUserHandler(res http.ResponseWriter, req *http.Request) {
@@ -188,57 +212,81 @@ func unfollowUserHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func usersListHandler(res http.ResponseWriter, req *http.Request) {
-	type UserListItem struct {
-		Username string
-		Name     string
-	}
-
 	type TemplateData struct {
-		FollowingList []UserListItem
-		FollowList    []UserListItem
+		FollowingList []string
+		FollowList    []string
 	}
-
-	var followingUserList []UserListItem
-	var followUserList []UserListItem
-
-	following := getUserFollowers()
-
-	for user, details := range data {
-		if user != loggedInUser {
-			_, follows := following[user]
-			if follows == true {
-				followingUserList = append(followingUserList, UserListItem{Username: user, Name: details.Name})
-			} else {
-				followUserList = append(followUserList, UserListItem{Username: user, Name: details.Name})
-			}
-		}
-	}
-
-	data := TemplateData{FollowingList: followingUserList, FollowList: followUserList}
+	response := getUserFollowers(loggedInUser, res, req)
+	data := TemplateData{FollowingList: response.Following, FollowList: response.Suggestions}
 	tp1.ExecuteTemplate(res, "users.html", &data)
 }
 
 // User Tweet Methods
 
-func addNewTweet(tweet string) {
-	temp := data[loggedInUser]
-	temp.posts = append(temp.posts, tweet)
-	data[loggedInUser] = temp
+func getTweetsForUsers(usersnames []string, res http.ResponseWriter, req *http.Request) ([]Tweet){
+	var conn *grpc.ClientConn
+	conn, err := grpc.Dial(":9000", grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("Couldn't connect: %s", err)
+	}
+
+	t := tweets.NewTweetsServiceClient(conn)
+
+	response, err := t.GetTweetsByUsers(context.Background(), &tweets.GetTweetsRequest{
+		Usernames: usersnames,
+	})
+
+	if err != nil {
+		log.Fatalf("Error when calling GetTweetsByUsers: %s", err)
+	}
+
+	var result []Tweet
+	for i := 0; i < len(response.Text); i++ {
+		tweet := Tweet{
+			Text: response.Text[i],
+			Username: response.CreatedBy[i],
+			Timestamp: response.Timestamp[i],
+		}
+		result = append(result, tweet)
+	}
+
+	return result
 }
 
-func getUserTweets() []string {
-	return data[loggedInUser].posts
+func addNewTweet(tweet string, username string) {
+	var conn *grpc.ClientConn
+	conn, err := grpc.Dial(":9000", grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("Couldn't connect: %s", err)
+	}
+
+	t := tweets.NewTweetsServiceClient(conn)
+
+	response, err := t.AddNewTweet(context.Background(), &tweets.AddTweetRequest{
+		Username: username,
+		Text: tweet,
+	})
+
+	if err != nil || !response.Success{
+		log.Fatalf("Error when calling AddNewTweet: %s", err)
+	}
 }
+
 
 func newTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
 	tweet := req.FormValue("tweet")
-	addNewTweet(tweet)
-	tp1.ExecuteTemplate(res, "MyTweets.html", data[loggedInUser].posts)
-
+	addNewTweet(tweet, loggedInUser)
+	myTweetRequestHandler(res, req)
 }
 
 func myTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
-	tp1.ExecuteTemplate(res, "MyTweets.html", getUserTweets())
+	type TemplateData struct {
+		Tweets []Tweet
+	}
+	usernames := []string{loggedInUser}
+	userTweets := getTweetsForUsers(usernames, res, req)
+	data := TemplateData{Tweets: userTweets}
+	tp1.ExecuteTemplate(res, "MyTweets.html", data)
 }
 
 func main() {

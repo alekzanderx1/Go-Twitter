@@ -19,7 +19,8 @@ message GetFollowingRequest{
 }
 
 message GetFollowingResponse{
-    repeated string followers = 1;
+    repeated string following = 1;
+    repeated string suggestions = 2;
 }
 
 message AddFollowerRequest{

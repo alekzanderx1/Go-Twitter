@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+option go_package = "./";
+
+package tweets;
+
+message GetTweetsRequest{
+    repeated string usernames =1;
+}
+
+message GetTweetsResponse{
+    repeated string text = 1;
+    repeated string createdBy = 2;
+    repeated string timestamp = 3;
+}
+
+message AddTweetRequest{
+    string username = 1;
+    string text = 2;
+}
+
+message AddTweetResponse{
+    bool success = 1;
+}
+
+
+service TweetsService{
+    rpc GetTweetsByUsers(GetTweetsRequest) returns (GetTweetsResponse) {}
+    rpc AddNewTweet(AddTweetRequest) returns (AddTweetResponse) {}
+}

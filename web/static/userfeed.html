@@ -34,7 +34,7 @@
         <h2 style="color: white;">Latest Tweets by your friends</h2>
         <ul class="tweets2" style="color: white;">
             {{range .Tweets}}
-                <li class="heart">{{.Username}} tweeted "{{.Text}}" </li>
+                <li class="heart">{{.Username}} tweeted "{{.Text}}" on {{.Timestamp}} </li>
             {{end}}
         </ul>
     </div>
