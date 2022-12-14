@@ -1,13 +1,16 @@
 package main
 
 import (
-	"html/template"
-	"net/http"
-	"Twitter/users"
+	"Twitter/authentication"
 	"Twitter/tweets"
-	"google.golang.org/grpc"
-	"log"
+	"Twitter/users"
+
 	"context"
+	"html/template"
+	"log"
+	"net/http"
+
+	"google.golang.org/grpc"
 )
 
 // Definition of Structs for Data storage
@@ -21,8 +24,8 @@ type User struct {
 }
 
 type Tweet struct {
-	Text     string
-	Username string
+	Text      string
+	Username  string
 	Timestamp string
 }
 
@@ -55,9 +58,9 @@ func signupRequestHandler(res http.ResponseWriter, req *http.Request) {
 	u := users.NewUserServiceClient(conn)
 
 	response, err := u.AddNewUser(context.Background(), &users.AddUserRequest{
-		Username:        username,
-		Password:        password,
-		Name:            name,
+		Username: username,
+		Password: password,
+		Name:     name,
 	})
 
 	if err != nil {
@@ -95,11 +98,12 @@ func loginRequestHandler(res http.ResponseWriter, req *http.Request) {
 		log.Fatalf("Couldn't connect: %s", err)
 	}
 
-	u := users.NewUserServiceClient(conn)
+	//u := users.NewUserServiceClient(conn)
+	a := authentication.NewAuthServiceClient(conn)
 
-	response, err := u.Authenticate(context.Background(), &users.AuthenticateRequest{
-		Username:        username,
-		Password:        password,
+	response, err := a.Authenticate(context.Background(), &authentication.AuthenticateRequest{
+		Username: username,
+		Password: password,
 	})
 
 	if err != nil {
@@ -140,7 +144,7 @@ func userFeedHandler(res http.ResponseWriter, req *http.Request) {
 
 // User Follower Methods
 
-func getUserFollowers(username string, res http.ResponseWriter, req *http.Request) (*users.GetFollowingResponse) {
+func getUserFollowers(username string, res http.ResponseWriter, req *http.Request) *users.GetFollowingResponse {
 	var conn *grpc.ClientConn
 	conn, err := grpc.Dial(":9000", grpc.WithInsecure())
 	if err != nil {
@@ -172,10 +176,10 @@ func followUser(username string) {
 
 	response, err := u.FollowUser(context.Background(), &users.AddFollowerRequest{
 		Username: loggedInUser,
-		Follow: username,
+		Follow:   username,
 	})
 
-	if err != nil || !response.Success{
+	if err != nil || !response.Success {
 		log.Fatalf("Error when calling FollowUser: %s", err)
 	}
 }
@@ -191,10 +195,10 @@ func unfollowUser(username string) {
 
 	response, err := u.UnfollowUser(context.Background(), &users.RemoveFollowerRequest{
 		Username: loggedInUser,
-		Follow: username,
+		Follow:   username,
 	})
 
-	if err != nil || !response.Success{
+	if err != nil || !response.Success {
 		log.Fatalf("Error when calling UnfollowUser: %s", err)
 	}
 }
@@ -223,7 +227,7 @@ func usersListHandler(res http.ResponseWriter, req *http.Request) {
 
 // User Tweet Methods
 
-func getTweetsForUsers(usersnames []string, res http.ResponseWriter, req *http.Request) ([]Tweet){
+func getTweetsForUsers(usersnames []string, res http.ResponseWriter, req *http.Request) []Tweet {
 	var conn *grpc.ClientConn
 	conn, err := grpc.Dial(":9000", grpc.WithInsecure())
 	if err != nil {
@@ -243,8 +247,8 @@ func getTweetsForUsers(usersnames []string, res http.ResponseWriter, req *http.R
 	var result []Tweet
 	for i := 0; i < len(response.Text); i++ {
 		tweet := Tweet{
-			Text: response.Text[i],
-			Username: response.CreatedBy[i],
+			Text:      response.Text[i],
+			Username:  response.CreatedBy[i],
 			Timestamp: response.Timestamp[i],
 		}
 		result = append(result, tweet)
@@ -264,14 +268,13 @@ func addNewTweet(tweet string, username string) {
 
 	response, err := t.AddNewTweet(context.Background(), &tweets.AddTweetRequest{
 		Username: username,
-		Text: tweet,
+		Text:     tweet,
 	})
 
-	if err != nil || !response.Success{
+	if err != nil || !response.Success {
 		log.Fatalf("Error when calling AddNewTweet: %s", err)
 	}
 }
-
 
 func newTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
 	tweet := req.FormValue("tweet")
