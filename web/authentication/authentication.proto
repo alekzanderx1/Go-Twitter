@@ -11,10 +11,21 @@ message AuthenticateRequest{
 
 message AuthenticateResponse{
     bool success = 1;
+    string sessionToken = 2;
 }
 
+message ValidateSessionRequest{
+    string sessionToken = 1;
+}
+
+message ValidateSessionResponse{
+    bool success = 1;
+    string username = 2;
+}
 
 
 service AuthService{
     rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse) {}
+    rpc ValidateSession(ValidateSessionRequest) returns (ValidateSessionResponse) {}
+    rpc InvalidateSession(ValidateSessionRequest) returns (ValidateSessionResponse) {}
 }

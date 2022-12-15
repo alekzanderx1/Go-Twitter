@@ -4,6 +4,7 @@ import (
 	"Twitter/authentication"
 	"Twitter/tweets"
 	"Twitter/users"
+	"time"
 
 	"context"
 	"html/template"
@@ -13,8 +14,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// Definition of Structs for Data storage
-
+// Definition of Structs for Data Conversion
 type User struct {
 	Username  string
 	Name      string
@@ -29,12 +29,45 @@ type Tweet struct {
 	Timestamp string
 }
 
-// Local storage
-
-var loggedInUser = "Guest"
+// var loggedInUser = "Guest"
 var tp1 *template.Template
 
-// Authentication Methods
+// Helper method to validate session token for a incoming request
+func validateSession(res http.ResponseWriter, req *http.Request) string {
+	// We can obtain the session token from the requests cookies, which come with every request
+	cookie, err1 := req.Cookie("session_token")
+	if err1 != nil || cookie == nil {
+		// If token not present, serve login/signup page
+		http.ServeFile(res, req, "./static/index.html")
+	}
+	sessionToken := cookie.Value
+
+	var conn *grpc.ClientConn
+	conn, err2 := grpc.Dial(":9000", grpc.WithInsecure())
+	if err2 != nil {
+		log.Fatalf("Couldn't connect: %s", err2)
+	}
+
+	a := authentication.NewAuthServiceClient(conn)
+
+	response, err := a.ValidateSession(context.Background(), &authentication.ValidateSessionRequest{
+		SessionToken: sessionToken,
+	})
+
+	if err != nil {
+		log.Fatalf("Error when calling ValidateSession: %s", err)
+	}
+
+	// If session expired or token not valid, serve login/signup page
+	if response.Success == false {
+		http.ServeFile(res, req, "./static/index.html")
+	}
+
+	return response.Username
+}
+
+// Authentication Handlers
+
 func signupPage(res http.ResponseWriter, req *http.Request) {
 	http.ServeFile(res, req, "./static/signup.html")
 }
@@ -98,7 +131,6 @@ func loginRequestHandler(res http.ResponseWriter, req *http.Request) {
 		log.Fatalf("Couldn't connect: %s", err)
 	}
 
-	//u := users.NewUserServiceClient(conn)
 	a := authentication.NewAuthServiceClient(conn)
 
 	response, err := a.Authenticate(context.Background(), &authentication.AuthenticateRequest{
@@ -114,17 +146,60 @@ func loginRequestHandler(res http.ResponseWriter, req *http.Request) {
 	if !response.Success {
 		http.Error(res, "Authentication Failed, please check username or password!", http.StatusConflict)
 	} else {
-		loggedInUser = username
-		userFeedHandler(res, req)
+		http.SetCookie(res, &http.Cookie{
+			Name:    "session_token",
+			Value:   response.SessionToken,
+			Expires: time.Now().Add(120 * time.Second),
+		})
+		http.Redirect(res, req, "/feed", http.StatusSeeOther)
 	}
 }
 
 func logoutHandler(res http.ResponseWriter, req *http.Request) {
-	loggedInUser = "Guest"
-	http.ServeFile(res, req, "./static/index.html")
+	validateSession(res, req)
+	// We can obtain the session token from the requests cookies, which come with every request
+	cookie, err1 := req.Cookie("session_token")
+	if err1 != nil {
+		// If token not present, serve login/signup page
+		http.SetCookie(res, &http.Cookie{
+			Name:    "session_token",
+			Value:   "",
+			Expires: time.Now(),
+		})
+		http.Redirect(res, req, "/", http.StatusSeeOther)
+	}
+	sessionToken := cookie.Value
+
+	var conn *grpc.ClientConn
+	conn, err2 := grpc.Dial(":9000", grpc.WithInsecure())
+	if err2 != nil {
+		log.Fatalf("Couldn't connect: %s", err2)
+	}
+
+	a := authentication.NewAuthServiceClient(conn)
+
+	response, err := a.InvalidateSession(context.Background(), &authentication.ValidateSessionRequest{
+		SessionToken: sessionToken,
+	})
+
+	if err != nil {
+		log.Fatalf("Error when calling InvalidateSession: %s", err)
+	}
+
+	// If session expired or token not valid, serve login/signup page
+	if response.Success == false {
+		http.ServeFile(res, req, "./static/index.html")
+	}
+
+	http.SetCookie(res, &http.Cookie{
+		Name:    "session_token",
+		Value:   "",
+		Expires: time.Now(),
+	})
+	http.Redirect(res, req, "/", http.StatusSeeOther)
 }
 
-// User Timeline Methods
+// User Timeline Handlers
 
 func getTimelineForUser(user string, res http.ResponseWriter, req *http.Request) []Tweet {
 	following := getUserFollowers(user, res, req).Following
@@ -136,15 +211,17 @@ func userFeedHandler(res http.ResponseWriter, req *http.Request) {
 		Username string
 		Tweets   []Tweet
 	}
-
+	loggedInUser := validateSession(res, req)
 	tweets := getTimelineForUser(loggedInUser, res, req)
 	data := TemplateData{Username: loggedInUser, Tweets: tweets}
 	tp1.ExecuteTemplate(res, "userfeed.html", data)
 }
 
-// User Follower Methods
+// User Get, Follow, Unfollow Handlers
 
 func getUserFollowers(username string, res http.ResponseWriter, req *http.Request) *users.GetFollowingResponse {
+	loggedInUser := validateSession(res, req)
+
 	var conn *grpc.ClientConn
 	conn, err := grpc.Dial(":9000", grpc.WithInsecure())
 	if err != nil {
@@ -165,7 +242,7 @@ func getUserFollowers(username string, res http.ResponseWriter, req *http.Reques
 	return response
 }
 
-func followUser(username string) {
+func followUser(loggedInUser string, follow string) {
 	var conn *grpc.ClientConn
 	conn, err := grpc.Dial(":9000", grpc.WithInsecure())
 	if err != nil {
@@ -176,7 +253,7 @@ func followUser(username string) {
 
 	response, err := u.FollowUser(context.Background(), &users.AddFollowerRequest{
 		Username: loggedInUser,
-		Follow:   username,
+		Follow:   follow,
 	})
 
 	if err != nil || !response.Success {
@@ -184,7 +261,7 @@ func followUser(username string) {
 	}
 }
 
-func unfollowUser(username string) {
+func unfollowUser(loggedInUser string, follow string) {
 	var conn *grpc.ClientConn
 	conn, err := grpc.Dial(":9000", grpc.WithInsecure())
 	if err != nil {
@@ -195,7 +272,7 @@ func unfollowUser(username string) {
 
 	response, err := u.UnfollowUser(context.Background(), &users.RemoveFollowerRequest{
 		Username: loggedInUser,
-		Follow:   username,
+		Follow:   follow,
 	})
 
 	if err != nil || !response.Success {
@@ -204,18 +281,21 @@ func unfollowUser(username string) {
 }
 
 func followUserHandler(res http.ResponseWriter, req *http.Request) {
+	loggedInUser := validateSession(res, req)
 	username := req.FormValue("username")
-	followUser(username)
+	followUser(loggedInUser, username)
 	usersListHandler(res, req)
 }
 
 func unfollowUserHandler(res http.ResponseWriter, req *http.Request) {
+	loggedInUser := validateSession(res, req)
 	username := req.FormValue("username")
-	unfollowUser(username)
+	unfollowUser(loggedInUser, username)
 	usersListHandler(res, req)
 }
 
 func usersListHandler(res http.ResponseWriter, req *http.Request) {
+	loggedInUser := validateSession(res, req)
 	type TemplateData struct {
 		FollowingList []string
 		FollowList    []string
@@ -225,9 +305,9 @@ func usersListHandler(res http.ResponseWriter, req *http.Request) {
 	tp1.ExecuteTemplate(res, "users.html", &data)
 }
 
-// User Tweet Methods
+// User Tweet Handlers
 
-func getTweetsForUsers(usersnames []string, res http.ResponseWriter, req *http.Request) []Tweet {
+func getTweetsForUsers(usernames []string, res http.ResponseWriter, req *http.Request) []Tweet {
 	var conn *grpc.ClientConn
 	conn, err := grpc.Dial(":9000", grpc.WithInsecure())
 	if err != nil {
@@ -237,7 +317,7 @@ func getTweetsForUsers(usersnames []string, res http.ResponseWriter, req *http.R
 	t := tweets.NewTweetsServiceClient(conn)
 
 	response, err := t.GetTweetsByUsers(context.Background(), &tweets.GetTweetsRequest{
-		Usernames: usersnames,
+		Usernames: usernames,
 	})
 
 	if err != nil {
@@ -277,12 +357,14 @@ func addNewTweet(tweet string, username string) {
 }
 
 func newTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
+	loggedInUser := validateSession(res, req)
 	tweet := req.FormValue("tweet")
 	addNewTweet(tweet, loggedInUser)
 	myTweetRequestHandler(res, req)
 }
 
 func myTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
+	loggedInUser := validateSession(res, req)
 	type TemplateData struct {
 		Tweets []Tweet
 	}
