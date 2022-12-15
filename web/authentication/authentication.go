@@ -79,7 +79,7 @@ func (s *Server) Authenticate(ctx context.Context, in *AuthenticateRequest) (*Au
 		}
 		cmd := exec.Command("curl", "-L", "http://127.0.0.1:12380/session", "-XPUT", "-d "+string(dataBytes))
 		cmd.Run()
-
+		time.Sleep(1 * time.Second)
 		return &AuthenticateResponse{Success: true, SessionToken: sessionToken}, nil
 	} else {
 
