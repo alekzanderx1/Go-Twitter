@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os/exec"
 	"time"
 
 	"github.com/google/uuid"
@@ -27,13 +28,13 @@ var sessions = map[string]session{}
 
 // each session contains the username of the user and the time at which it expires
 type session struct {
-	username string
-	expiry   time.Time
+	Username string
+	Expiry   time.Time
 }
 
 // we'll use this method later to determine if the session has expired
 func (s session) isExpired() bool {
-	return s.expiry.Before(time.Now())
+	return s.Expiry.Before(time.Now())
 }
 
 func (s *Server) Authenticate(ctx context.Context, in *AuthenticateRequest) (*AuthenticateResponse, error) {
@@ -52,16 +53,34 @@ func (s *Server) Authenticate(ctx context.Context, in *AuthenticateRequest) (*Au
 	temp := data[in.Username]
 	result1 := temp.Password == in.Password
 
+	// Getting Sessions from raft
+	resp_sessions, err := http.Get("http://127.0.0.1:12380/session")
+	if err != nil {
+		fmt.Println(err)
+	}
+	body_sessions, err := ioutil.ReadAll(resp_sessions.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+	json.Unmarshal(body_sessions, &sessions)
+
 	if result1 {
 		sessionToken := uuid.NewString()
 		expiresAt := time.Now().Add(120 * time.Second)
 
 		// Set the token in the session map, along with the session information
 		sessions[sessionToken] = session{
-			username: in.Username,
-			expiry:   expiresAt,
+			Username: in.Username,
+			Expiry:   expiresAt,
 		}
 
+		dataBytes, err := json.Marshal(sessions)
+		if err != nil {
+			fmt.Println(err)
+		}
+		cmd := exec.Command("curl", "-L", "http://127.0.0.1:12380/session", "-XPUT", "-d "+string(dataBytes))
+
+		cmd.Run()
 		return &AuthenticateResponse{Success: true, SessionToken: sessionToken}, nil
 	} else {
 
@@ -72,6 +91,16 @@ func (s *Server) Authenticate(ctx context.Context, in *AuthenticateRequest) (*Au
 
 func (s *Server) ValidateSession(ctx context.Context, in *ValidateSessionRequest) (*ValidateSessionResponse, error) {
 	// Get the session from our session map
+	resp_sessions, err := http.Get("http://127.0.0.1:12380/session")
+	if err != nil {
+		fmt.Println(err)
+	}
+	body_sessions, err := ioutil.ReadAll(resp_sessions.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+	json.Unmarshal(body_sessions, &sessions)
+
 	userSession, exists := sessions[in.SessionToken]
 	if !exists {
 		// If the session token is not present in session map, return an unauthorized error
@@ -84,10 +113,26 @@ func (s *Server) ValidateSession(ctx context.Context, in *ValidateSessionRequest
 		return &ValidateSessionResponse{Success: false}, nil
 	}
 
-	return &ValidateSessionResponse{Success: true, Username: userSession.username}, nil
+	return &ValidateSessionResponse{Success: true, Username: userSession.Username}, nil
 }
 
 func (s *Server) InvalidateSession(ctx context.Context, in *ValidateSessionRequest) (*ValidateSessionResponse, error) {
+	resp_sessions, err := http.Get("http://127.0.0.1:12380/session")
+	if err != nil {
+		fmt.Println(err)
+	}
+	body_sessions, err := ioutil.ReadAll(resp_sessions.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+	json.Unmarshal(body_sessions, &sessions)
 	delete(sessions, in.SessionToken)
+	dataBytes, err := json.Marshal(sessions)
+	if err != nil {
+		fmt.Println(err)
+	}
+	cmd := exec.Command("curl", "-L", "http://127.0.0.1:12380/session", "-XPUT", "-d "+string(dataBytes))
+
+	cmd.Run()
 	return &ValidateSessionResponse{Success: true}, nil
 }
