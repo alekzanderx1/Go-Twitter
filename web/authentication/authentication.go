@@ -23,9 +23,6 @@ type Server struct {
 	AuthServiceServer
 }
 
-// this map stores the users sessions. For larger scale applications, you can use a database or cache for this purpose
-var sessions = map[string]session{}
-
 // each session contains the username of the user and the time at which it expires
 type session struct {
 	Username string
@@ -38,6 +35,7 @@ func (s session) isExpired() bool {
 }
 
 func (s *Server) Authenticate(ctx context.Context, in *AuthenticateRequest) (*AuthenticateResponse, error) {
+	var sessions = map[string]session{}
 	var data = make(map[string]User)
 
 	resp, err := http.Get("http://127.0.0.1:12380/users")
@@ -74,13 +72,14 @@ func (s *Server) Authenticate(ctx context.Context, in *AuthenticateRequest) (*Au
 			Expiry:   expiresAt,
 		}
 
+		// Persist changes to Raft
 		dataBytes, err := json.Marshal(sessions)
 		if err != nil {
 			fmt.Println(err)
 		}
 		cmd := exec.Command("curl", "-L", "http://127.0.0.1:12380/session", "-XPUT", "-d "+string(dataBytes))
-
 		cmd.Run()
+
 		return &AuthenticateResponse{Success: true, SessionToken: sessionToken}, nil
 	} else {
 
@@ -90,6 +89,7 @@ func (s *Server) Authenticate(ctx context.Context, in *AuthenticateRequest) (*Au
 }
 
 func (s *Server) ValidateSession(ctx context.Context, in *ValidateSessionRequest) (*ValidateSessionResponse, error) {
+	var sessions = map[string]session{}
 	// Get the session from our session map
 	resp_sessions, err := http.Get("http://127.0.0.1:12380/session")
 	if err != nil {
@@ -106,10 +106,18 @@ func (s *Server) ValidateSession(ctx context.Context, in *ValidateSessionRequest
 		// If the session token is not present in session map, return an unauthorized error
 		return &ValidateSessionResponse{Success: false}, nil
 	}
-	// If the session is present, but has expired, we can delete the session, and return
-	// an unauthorized status
+	// If the session is present, but has expired, we can delete the session
 	if userSession.isExpired() {
 		delete(sessions, in.SessionToken)
+
+		// Persist session changes to Raft
+		dataBytes, err := json.Marshal(sessions)
+		if err != nil {
+			fmt.Println(err)
+		}
+		cmd := exec.Command("curl", "-L", "http://127.0.0.1:12380/session", "-XPUT", "-d "+string(dataBytes))
+		cmd.Run()
+
 		return &ValidateSessionResponse{Success: false}, nil
 	}
 
@@ -117,6 +125,8 @@ func (s *Server) ValidateSession(ctx context.Context, in *ValidateSessionRequest
 }
 
 func (s *Server) InvalidateSession(ctx context.Context, in *ValidateSessionRequest) (*ValidateSessionResponse, error) {
+	var sessions = map[string]session{}
+	// Get session data from raft
 	resp_sessions, err := http.Get("http://127.0.0.1:12380/session")
 	if err != nil {
 		fmt.Println(err)
@@ -126,13 +136,17 @@ func (s *Server) InvalidateSession(ctx context.Context, in *ValidateSessionReque
 		fmt.Println(err)
 	}
 	json.Unmarshal(body_sessions, &sessions)
+
+	// Delete token
 	delete(sessions, in.SessionToken)
+
+	// Persist changes to raft
 	dataBytes, err := json.Marshal(sessions)
 	if err != nil {
 		fmt.Println(err)
 	}
 	cmd := exec.Command("curl", "-L", "http://127.0.0.1:12380/session", "-XPUT", "-d "+string(dataBytes))
-
 	cmd.Run()
+
 	return &ValidateSessionResponse{Success: true}, nil
 }
