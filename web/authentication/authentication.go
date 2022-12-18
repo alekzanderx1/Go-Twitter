@@ -117,7 +117,7 @@ func (s *Server) ValidateSession(ctx context.Context, in *ValidateSessionRequest
 		}
 		cmd := exec.Command("curl", "-L", "http://127.0.0.1:12380/session", "-XPUT", "-d "+string(dataBytes))
 		cmd.Run()
-
+		time.Sleep(1 * time.Second)
 		return &ValidateSessionResponse{Success: false}, nil
 	}
 
@@ -147,6 +147,6 @@ func (s *Server) InvalidateSession(ctx context.Context, in *ValidateSessionReque
 	}
 	cmd := exec.Command("curl", "-L", "http://127.0.0.1:12380/session", "-XPUT", "-d "+string(dataBytes))
 	cmd.Run()
-
+	time.Sleep(1 * time.Second)
 	return &ValidateSessionResponse{Success: true}, nil
 }

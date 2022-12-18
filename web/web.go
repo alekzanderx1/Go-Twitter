@@ -4,6 +4,7 @@ import (
 	"Twitter/authentication"
 	"Twitter/tweets"
 	"Twitter/users"
+	"fmt"
 	"time"
 
 	"context"
@@ -35,10 +36,12 @@ var tp1 *template.Template
 // Helper method to validate session token for a incoming request
 func validateSession(res http.ResponseWriter, req *http.Request) string {
 	// We can obtain the session token from the requests cookies, which come with every request
-	cookie, err1 := req.Cookie("session_token")
-	if err1 != nil || cookie == nil {
+	cookie, err := req.Cookie("session_token")
+	if err != nil {
 		// If token not present, serve login/signup page
+		fmt.Print("Failed to read cookie, redirecting")
 		http.ServeFile(res, req, "./static/index.html")
+		return ""
 	}
 	sessionToken := cookie.Value
 
@@ -60,7 +63,13 @@ func validateSession(res http.ResponseWriter, req *http.Request) string {
 
 	// If session expired or token not valid, serve login/signup page
 	if response.Success == false {
-		http.ServeFile(res, req, "./static/index.html")
+		http.SetCookie(res, &http.Cookie{
+			Name:    "session_token",
+			Value:   "",
+			Expires: time.Now(),
+		})
+		http.Redirect(res, req, "/", http.StatusSeeOther)
+		return ""
 	}
 
 	return response.Username
@@ -156,7 +165,10 @@ func loginRequestHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func logoutHandler(res http.ResponseWriter, req *http.Request) {
-	validateSession(res, req)
+	loggedInUser := validateSession(res, req)
+	if loggedInUser == "" {
+		return
+	}
 	// We can obtain the session token from the requests cookies, which come with every request
 	cookie, err1 := req.Cookie("session_token")
 	if err1 != nil {
@@ -212,6 +224,9 @@ func userFeedHandler(res http.ResponseWriter, req *http.Request) {
 		Tweets   []Tweet
 	}
 	loggedInUser := validateSession(res, req)
+	if loggedInUser == "" {
+		return
+	}
 	tweets := getTimelineForUser(loggedInUser, res, req)
 	data := TemplateData{Username: loggedInUser, Tweets: tweets}
 	tp1.ExecuteTemplate(res, "userfeed.html", data)
@@ -219,9 +234,7 @@ func userFeedHandler(res http.ResponseWriter, req *http.Request) {
 
 // User Get, Follow, Unfollow Handlers
 
-func getUserFollowers(username string, res http.ResponseWriter, req *http.Request) *users.GetFollowingResponse {
-	loggedInUser := validateSession(res, req)
-
+func getUserFollowers(loggedInUser string, res http.ResponseWriter, req *http.Request) *users.GetFollowingResponse {
 	var conn *grpc.ClientConn
 	conn, err := grpc.Dial(":9000", grpc.WithInsecure())
 	if err != nil {
@@ -282,6 +295,9 @@ func unfollowUser(loggedInUser string, follow string) {
 
 func followUserHandler(res http.ResponseWriter, req *http.Request) {
 	loggedInUser := validateSession(res, req)
+	if loggedInUser == "" {
+		return
+	}
 	username := req.FormValue("username")
 	followUser(loggedInUser, username)
 	usersListHandler(res, req)
@@ -289,6 +305,9 @@ func followUserHandler(res http.ResponseWriter, req *http.Request) {
 
 func unfollowUserHandler(res http.ResponseWriter, req *http.Request) {
 	loggedInUser := validateSession(res, req)
+	if loggedInUser == "" {
+		return
+	}
 	username := req.FormValue("username")
 	unfollowUser(loggedInUser, username)
 	usersListHandler(res, req)
@@ -296,6 +315,9 @@ func unfollowUserHandler(res http.ResponseWriter, req *http.Request) {
 
 func usersListHandler(res http.ResponseWriter, req *http.Request) {
 	loggedInUser := validateSession(res, req)
+	if loggedInUser == "" {
+		return
+	}
 	type TemplateData struct {
 		FollowingList []string
 		FollowList    []string
@@ -358,6 +380,9 @@ func addNewTweet(tweet string, username string) {
 
 func newTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
 	loggedInUser := validateSession(res, req)
+	if loggedInUser == "" {
+		return
+	}
 	tweet := req.FormValue("tweet")
 	addNewTweet(tweet, loggedInUser)
 	myTweetRequestHandler(res, req)
@@ -365,6 +390,9 @@ func newTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
 
 func myTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
 	loggedInUser := validateSession(res, req)
+	if loggedInUser == "" {
+		return
+	}
 	type TemplateData struct {
 		Tweets []Tweet
 	}
