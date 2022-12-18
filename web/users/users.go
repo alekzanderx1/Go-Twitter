@@ -35,7 +35,7 @@ var CONFIG Configuration
 
 // Load configuration from external file
 func loadConfiguration() Configuration {
-	file, err1 := os.Open("./users/users_config.json")
+	file, err1 := os.Open("./users/user_config.json")
 	if err1 != nil {
 		fmt.Print("File reading error")
 		fmt.Print(err1)
