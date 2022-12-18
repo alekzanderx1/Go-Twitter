@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"time"
 
@@ -29,6 +31,41 @@ type session struct {
 	Expiry   time.Time
 }
 
+type Configuration struct {
+	RAFT_CLIENTS []string
+}
+
+// Static variables
+var CONFIG Configuration
+
+func init() {
+	CONFIG = loadConfiguration()
+}
+
+// Load configuration from external file
+func loadConfiguration() Configuration {
+	file, _ := os.Open("conf.json")
+	decoder := json.NewDecoder(file)
+	conf := Configuration{}
+	err := decoder.Decode(&conf)
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	file.Close()
+	return conf
+}
+
+func findWorkingRAFTClient() string {
+	for _, url := range CONFIG.RAFT_CLIENTS {
+		_, err := http.Get(url + "/ping")
+		if err == nil {
+			return url
+		}
+	}
+	log.Fatalf("Couldn't connect find working RAFT client")
+	return ""
+}
+
 // we'll use this method later to determine if the session has expired
 func (s session) isExpired() bool {
 	return s.Expiry.Before(time.Now())
@@ -37,8 +74,8 @@ func (s session) isExpired() bool {
 func (s *Server) Authenticate(ctx context.Context, in *AuthenticateRequest) (*AuthenticateResponse, error) {
 	var sessions = map[string]session{}
 	var data = make(map[string]User)
-
-	resp, err := http.Get("http://127.0.0.1:12380/users")
+	raftUrl := findWorkingRAFTClient()
+	resp, err := http.Get(raftUrl + "/users")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -52,7 +89,7 @@ func (s *Server) Authenticate(ctx context.Context, in *AuthenticateRequest) (*Au
 	result1 := temp.Password == in.Password
 
 	// Getting Sessions from raft
-	resp_sessions, err := http.Get("http://127.0.0.1:12380/session")
+	resp_sessions, err := http.Get(raftUrl + "/session")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -77,7 +114,7 @@ func (s *Server) Authenticate(ctx context.Context, in *AuthenticateRequest) (*Au
 		if err != nil {
 			fmt.Println(err)
 		}
-		cmd := exec.Command("curl", "-L", "http://127.0.0.1:12380/session", "-XPUT", "-d "+string(dataBytes))
+		cmd := exec.Command("curl", "-L", raftUrl+"/session", "-XPUT", "-d "+string(dataBytes))
 		cmd.Run()
 		time.Sleep(1 * time.Second)
 		return &AuthenticateResponse{Success: true, SessionToken: sessionToken}, nil
