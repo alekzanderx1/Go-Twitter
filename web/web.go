@@ -5,9 +5,11 @@ import (
 	"Twitter/tweets"
 	"Twitter/users"
 	"fmt"
+	"os"
 	"time"
 
 	"context"
+	"encoding/json"
 	"html/template"
 	"log"
 	"net/http"
@@ -30,8 +32,27 @@ type Tweet struct {
 	Timestamp string
 }
 
-// var loggedInUser = "Guest"
+type Configuration struct {
+	GRPC_TARGET  string
+	HTTP_ADDRESS string
+}
+
+// Static variables
 var tp1 *template.Template
+var CONFIG Configuration
+
+// Load configuration from external file
+func loadConfiguration() Configuration {
+	file, _ := os.Open("web_conf.json")
+	defer file.Close()
+	decoder := json.NewDecoder(file)
+	conf := Configuration{}
+	err := decoder.Decode(&conf)
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	return conf
+}
 
 // Helper method to validate session token for a incoming request
 func validateSession(res http.ResponseWriter, req *http.Request) string {
@@ -46,7 +67,7 @@ func validateSession(res http.ResponseWriter, req *http.Request) string {
 	sessionToken := cookie.Value
 
 	var conn *grpc.ClientConn
-	conn, err2 := grpc.Dial(":9000", grpc.WithInsecure())
+	conn, err2 := grpc.Dial(CONFIG.GRPC_TARGET, grpc.WithInsecure())
 	if err2 != nil {
 		log.Fatalf("Couldn't connect: %s", err2)
 	}
@@ -92,7 +113,7 @@ func signupRequestHandler(res http.ResponseWriter, req *http.Request) {
 	name := req.FormValue("name")
 
 	var conn *grpc.ClientConn
-	conn, err := grpc.Dial(":9000", grpc.WithInsecure())
+	conn, err := grpc.Dial(CONFIG.GRPC_TARGET, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("Couldn't connect: %s", err)
 	}
@@ -135,7 +156,7 @@ func loginRequestHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	var conn *grpc.ClientConn
-	conn, err := grpc.Dial(":9000", grpc.WithInsecure())
+	conn, err := grpc.Dial(CONFIG.GRPC_TARGET, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("Couldn't connect: %s", err)
 	}
@@ -158,7 +179,7 @@ func loginRequestHandler(res http.ResponseWriter, req *http.Request) {
 		http.SetCookie(res, &http.Cookie{
 			Name:    "session_token",
 			Value:   response.SessionToken,
-			Expires: time.Now().Add(120 * time.Second),
+			Expires: time.Now().Add(500 * time.Second),
 		})
 		http.Redirect(res, req, "/feed", http.StatusSeeOther)
 	}
@@ -173,17 +194,13 @@ func logoutHandler(res http.ResponseWriter, req *http.Request) {
 	cookie, err1 := req.Cookie("session_token")
 	if err1 != nil {
 		// If token not present, serve login/signup page
-		http.SetCookie(res, &http.Cookie{
-			Name:    "session_token",
-			Value:   "",
-			Expires: time.Now(),
-		})
 		http.Redirect(res, req, "/", http.StatusSeeOther)
+		return
 	}
 	sessionToken := cookie.Value
 
 	var conn *grpc.ClientConn
-	conn, err2 := grpc.Dial(":9000", grpc.WithInsecure())
+	conn, err2 := grpc.Dial(CONFIG.GRPC_TARGET, grpc.WithInsecure())
 	if err2 != nil {
 		log.Fatalf("Couldn't connect: %s", err2)
 	}
@@ -200,7 +217,13 @@ func logoutHandler(res http.ResponseWriter, req *http.Request) {
 
 	// If session expired or token not valid, serve login/signup page
 	if response.Success == false {
+		http.SetCookie(res, &http.Cookie{
+			Name:    "session_token",
+			Value:   "",
+			Expires: time.Now(),
+		})
 		http.ServeFile(res, req, "./static/index.html")
+		return
 	}
 
 	http.SetCookie(res, &http.Cookie{
@@ -236,7 +259,7 @@ func userFeedHandler(res http.ResponseWriter, req *http.Request) {
 
 func getUserFollowers(loggedInUser string, res http.ResponseWriter, req *http.Request) *users.GetFollowingResponse {
 	var conn *grpc.ClientConn
-	conn, err := grpc.Dial(":9000", grpc.WithInsecure())
+	conn, err := grpc.Dial(CONFIG.GRPC_TARGET, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("Couldn't connect: %s", err)
 	}
@@ -257,7 +280,7 @@ func getUserFollowers(loggedInUser string, res http.ResponseWriter, req *http.Re
 
 func followUser(loggedInUser string, follow string) {
 	var conn *grpc.ClientConn
-	conn, err := grpc.Dial(":9000", grpc.WithInsecure())
+	conn, err := grpc.Dial(CONFIG.GRPC_TARGET, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("Couldn't connect: %s", err)
 	}
@@ -276,7 +299,7 @@ func followUser(loggedInUser string, follow string) {
 
 func unfollowUser(loggedInUser string, follow string) {
 	var conn *grpc.ClientConn
-	conn, err := grpc.Dial(":9000", grpc.WithInsecure())
+	conn, err := grpc.Dial(CONFIG.GRPC_TARGET, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("Couldn't connect: %s", err)
 	}
@@ -331,7 +354,7 @@ func usersListHandler(res http.ResponseWriter, req *http.Request) {
 
 func getTweetsForUsers(usernames []string, res http.ResponseWriter, req *http.Request) []Tweet {
 	var conn *grpc.ClientConn
-	conn, err := grpc.Dial(":9000", grpc.WithInsecure())
+	conn, err := grpc.Dial(CONFIG.GRPC_TARGET, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("Couldn't connect: %s", err)
 	}
@@ -361,7 +384,7 @@ func getTweetsForUsers(usernames []string, res http.ResponseWriter, req *http.Re
 
 func addNewTweet(tweet string, username string) {
 	var conn *grpc.ClientConn
-	conn, err := grpc.Dial(":9000", grpc.WithInsecure())
+	conn, err := grpc.Dial(CONFIG.GRPC_TARGET, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("Couldn't connect: %s", err)
 	}
@@ -402,7 +425,9 @@ func myTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
 	tp1.ExecuteTemplate(res, "MyTweets.html", data)
 }
 
+// Load configuration, Register Handlers to Endpoints, and Start a HTTP Server
 func main() {
+	CONFIG = loadConfiguration()
 	tp1, _ = tp1.ParseGlob("static/*.html")
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 
@@ -423,5 +448,5 @@ func main() {
 	http.HandleFunc("/tweet", newTweetRequestHandler)
 	http.HandleFunc("/mytweets", myTweetRequestHandler)
 
-	http.ListenAndServe("0.0.0.0:8000", nil)
+	http.ListenAndServe(CONFIG.HTTP_ADDRESS, nil)
 }
