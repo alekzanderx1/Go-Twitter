@@ -32,19 +32,19 @@ type session struct {
 }
 
 type Configuration struct {
-	RAFT_CLIENTS []string
+	RaftClients []string
 }
 
 // Static variables
 var CONFIG Configuration
 
-func init() {
-	CONFIG = loadConfiguration()
-}
-
 // Load configuration from external file
 func loadConfiguration() Configuration {
-	file, _ := os.Open("conf.json")
+	file, err1 := os.Open("./authentication/auth_config.json")
+	if err1 != nil {
+		fmt.Print("File reading error")
+		fmt.Print(err1)
+	}
 	decoder := json.NewDecoder(file)
 	conf := Configuration{}
 	err := decoder.Decode(&conf)
@@ -56,7 +56,8 @@ func loadConfiguration() Configuration {
 }
 
 func findWorkingRAFTClient() string {
-	for _, url := range CONFIG.RAFT_CLIENTS {
+	fmt.Print(CONFIG.RaftClients)
+	for _, url := range CONFIG.RaftClients {
 		_, err := http.Get(url + "/ping")
 		if err == nil {
 			return url
@@ -64,6 +65,10 @@ func findWorkingRAFTClient() string {
 	}
 	log.Fatalf("Couldn't connect find working RAFT client")
 	return ""
+}
+
+func init() {
+	CONFIG = loadConfiguration()
 }
 
 // we'll use this method later to determine if the session has expired

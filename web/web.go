@@ -42,15 +42,19 @@ var tp1 *template.Template
 var CONFIG Configuration
 
 // Load configuration from external file
-func loadConfiguration() Configuration {
-	file, _ := os.Open("web_conf.json")
-	defer file.Close()
+func loadWebConfiguration() Configuration {
+	file, err1 := os.Open("conf.json")
+	if err1 != nil {
+		fmt.Print("File reading error")
+		fmt.Print(err1)
+	}
 	decoder := json.NewDecoder(file)
 	conf := Configuration{}
 	err := decoder.Decode(&conf)
 	if err != nil {
 		fmt.Println("error:", err)
 	}
+	file.Close()
 	return conf
 }
 
@@ -427,7 +431,7 @@ func myTweetRequestHandler(res http.ResponseWriter, req *http.Request) {
 
 // Load configuration, Register Handlers to Endpoints, and Start a HTTP Server
 func main() {
-	CONFIG = loadConfiguration()
+	CONFIG = loadWebConfiguration()
 	tp1, _ = tp1.ParseGlob("static/*.html")
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 
