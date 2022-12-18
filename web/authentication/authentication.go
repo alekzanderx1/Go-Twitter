@@ -132,8 +132,9 @@ func (s *Server) Authenticate(ctx context.Context, in *AuthenticateRequest) (*Au
 
 func (s *Server) ValidateSession(ctx context.Context, in *ValidateSessionRequest) (*ValidateSessionResponse, error) {
 	var sessions = map[string]session{}
+	raftUrl := findWorkingRAFTClient()
 	// Get the session from our session map
-	resp_sessions, err := http.Get("http://127.0.0.1:12380/session")
+	resp_sessions, err := http.Get(raftUrl + "/session")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -157,7 +158,7 @@ func (s *Server) ValidateSession(ctx context.Context, in *ValidateSessionRequest
 		if err != nil {
 			fmt.Println(err)
 		}
-		cmd := exec.Command("curl", "-L", "http://127.0.0.1:12380/session", "-XPUT", "-d "+string(dataBytes))
+		cmd := exec.Command("curl", "-L", raftUrl+"/session", "-XPUT", "-d "+string(dataBytes))
 		cmd.Run()
 		time.Sleep(1 * time.Second)
 		return &ValidateSessionResponse{Success: false}, nil
@@ -168,8 +169,9 @@ func (s *Server) ValidateSession(ctx context.Context, in *ValidateSessionRequest
 
 func (s *Server) InvalidateSession(ctx context.Context, in *ValidateSessionRequest) (*ValidateSessionResponse, error) {
 	var sessions = map[string]session{}
+	raftUrl := findWorkingRAFTClient()
 	// Get session data from raft
-	resp_sessions, err := http.Get("http://127.0.0.1:12380/session")
+	resp_sessions, err := http.Get(raftUrl + "/session")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -187,7 +189,7 @@ func (s *Server) InvalidateSession(ctx context.Context, in *ValidateSessionReque
 	if err != nil {
 		fmt.Println(err)
 	}
-	cmd := exec.Command("curl", "-L", "http://127.0.0.1:12380/session", "-XPUT", "-d "+string(dataBytes))
+	cmd := exec.Command("curl", "-L", raftUrl+"/session", "-XPUT", "-d "+string(dataBytes))
 	cmd.Run()
 	time.Sleep(1 * time.Second)
 	return &ValidateSessionResponse{Success: true}, nil
