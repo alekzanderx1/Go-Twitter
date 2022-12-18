@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os/exec"
+	"os"
+	"log"
 )
 
 // Definition of Structs for Data storage
