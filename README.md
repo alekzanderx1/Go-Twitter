@@ -8,7 +8,8 @@ Technical specifications:
 
 2. 3 backend services (namely authentication service, users service, tweets service) which talk to Web Server through GRPC in order to fulfill users requests. 
 
-3. The backend services persist all data onto RAFT backed storage using etcd.
+3. The backend services persist all data onto RAFT backed storage using etcd. 
+   We are using etcd's implementation of RAFT where data is stored in a Key-Value map which is replicated and kept consistent using RAFT in the background.  For each microservice of our application, we use a Key to serialize data as JSON and store using the RAFT client.
 
 ---
 
@@ -30,58 +31,51 @@ The steps need to be followed in order.
 
 ### Setup
 
-Firstly, [Install Go](https://go.dev/doc/install)
+Firstly, [Install Go](https://go.dev/doc/install) and setup Go PATH
 
-Then, install Goreman 
-``` 
-go install github.com/mattn/goreman@latest 
-``` 
+Then run following script to build RAFT and Go modules for our project 
 
-Then start from root of project and ensure go dependencies are satisfied 
 ``` 
-    cd ./web
-    go mod download 
+    cd cmd
+    ./setup.sh
 ``` 
 
 ### Start Raft
 
-Start from root of project
+This will cleanup old data and launch 3 member RAFT cluster
+
 ```bash
-    cd ./raft/src/go.etcd.io/etcd/contrib/raftexample
-
-    go build -o raftexample
-
-    goreman start
+    ./run_raft.sh
 ```
 
 ### Run Tests
-Start from root of project. 
+
+This will seed initial data and run Go Tests for all services.
+In a new terminal, start from root of project and run
 
 ```bash
-    cd ./web/users
-    go test 
-
-    cd ./web/tweets
-    go test 
-
-    cd ./web/authentication
-    go test 
-
+    cd cmd
+    ./run_tests.sh
 ```
+
 ### Start the Web Server
-Start from root of project. 
+In a new terminal, start from root of project and run
 
 ```bash
-    go run ./web/web.go
+    cd ./web
+    go run ./web.go
 ```
 
 ### Start the Backend Services
-Start from root of project.  
+In a new terminal, start from root of project and run
 
 ```bash
-    go run ./web/server.go
+    cd ./web
+    go run ./server.go
 ```
-
 > The application should be available at https://ide8000.anubis-lms.io/ or http://localhost:8080/ if running locally. 
 
-
+> Note: To Stop RAFT once done 
+> ```bash
+>     goreman run stop-all
+> ```
