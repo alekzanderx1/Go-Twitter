@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
-	"os/exec"
-	"os"
 	"log"
+	"net/http"
+	"os"
+	"os/exec"
+	"strings"
 )
 
 // Definition of Structs for Data storage
@@ -23,9 +24,6 @@ type Server struct {
 	UserServiceServer
 }
 
-// In memory non-persistent storage, to be replaced with database later
-var data = make(map[string]User)
-
 type Configuration struct {
 	RaftClients []string
 }
@@ -35,7 +33,18 @@ var CONFIG Configuration
 
 // Load configuration from external file
 func loadConfiguration() Configuration {
-	file, err1 := os.Open("./users/user_config.json")
+	path, err3 := os.Getwd()
+	if err3 != nil {
+		log.Println(err3)
+	}
+	var file *os.File
+	var err1 error
+	if strings.HasSuffix(path, "\\users") || strings.HasSuffix(path, "/users") {
+		file, err1 = os.Open("user_config.json")
+	} else {
+		file, err1 = os.Open("./users/user_config.json")
+	}
+
 	if err1 != nil {
 		fmt.Print("File reading error")
 		fmt.Print(err1)
@@ -51,14 +60,13 @@ func loadConfiguration() Configuration {
 }
 
 func findWorkingRAFTClient() string {
-	fmt.Print(CONFIG.RaftClients)
 	for _, url := range CONFIG.RaftClients {
 		_, err := http.Get(url + "/ping")
 		if err == nil {
 			return url
 		}
 	}
-	log.Fatalf("Couldn't connect find working RAFT client")
+	log.Fatalf("Couldn't find working RAFT client")
 	return ""
 }
 
@@ -68,8 +76,9 @@ func init() {
 
 func (s *Server) Authenticate(ctx context.Context, in *AuthenticateRequest) (*AuthenticateResponse, error) {
 	raftUrl := findWorkingRAFTClient()
+	var data = make(map[string]User)
 
-	resp, err := http.Get(raftUrl+"/users")
+	resp, err := http.Get(raftUrl + "/users")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -92,8 +101,9 @@ func (s *Server) Authenticate(ctx context.Context, in *AuthenticateRequest) (*Au
 
 func (s *Server) AddNewUser(ctx context.Context, in *AddUserRequest) (*AddUserResponse, error) {
 	raftUrl := findWorkingRAFTClient()
+	var data = make(map[string]User)
 
-	resp, err := http.Get(raftUrl+"/users")
+	resp, err := http.Get(raftUrl + "/users")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -127,8 +137,9 @@ func (s *Server) AddNewUser(ctx context.Context, in *AddUserRequest) (*AddUserRe
 
 func (s *Server) GetFollowers(ctx context.Context, in *GetFollowingRequest) (*GetFollowingResponse, error) {
 	raftUrl := findWorkingRAFTClient()
+	var data = make(map[string]User)
 
-	resp, err := http.Get(raftUrl+"/users")
+	resp, err := http.Get(raftUrl + "/users")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -160,8 +171,9 @@ func (s *Server) GetFollowers(ctx context.Context, in *GetFollowingRequest) (*Ge
 
 func (s *Server) FollowUser(ctx context.Context, in *AddFollowerRequest) (*AddFollowerResponse, error) {
 	raftUrl := findWorkingRAFTClient()
+	var data = make(map[string]User)
 
-	resp, err := http.Get(raftUrl+"/users")
+	resp, err := http.Get(raftUrl + "/users")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -184,8 +196,9 @@ func (s *Server) FollowUser(ctx context.Context, in *AddFollowerRequest) (*AddFo
 
 func (s *Server) UnfollowUser(ctx context.Context, in *RemoveFollowerRequest) (*RemoveFollowerResponse, error) {
 	raftUrl := findWorkingRAFTClient()
-	
-	resp, err := http.Get(raftUrl+"/users")
+	var data = make(map[string]User)
+
+	resp, err := http.Get(raftUrl + "/users")
 	if err != nil {
 		fmt.Println(err)
 	}

@@ -9,11 +9,13 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 )
 
+// Definition of structs for Data Transfer
 type User struct {
 	Username  string
 	Name      string
@@ -40,7 +42,18 @@ var CONFIG Configuration
 
 // Load configuration from external file
 func loadConfiguration() Configuration {
-	file, err1 := os.Open("./authentication/auth_config.json")
+	path, err3 := os.Getwd()
+	if err3 != nil {
+		log.Println(err3)
+	}
+	var file *os.File
+	var err1 error
+	if strings.HasSuffix(path, "\\authentication") || strings.HasSuffix(path, "/authentication") {
+		file, err1 = os.Open("auth_config.json")
+	} else {
+		file, err1 = os.Open("./authentication/auth_config.json")
+	}
+
 	if err1 != nil {
 		fmt.Print("File reading error")
 		fmt.Print(err1)
@@ -56,7 +69,6 @@ func loadConfiguration() Configuration {
 }
 
 func findWorkingRAFTClient() string {
-	fmt.Print(CONFIG.RaftClients)
 	for _, url := range CONFIG.RaftClients {
 		_, err := http.Get(url + "/ping")
 		if err == nil {

@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"testing"
+	"time"
 )
 
 const bufSize = 1024 * 1024
@@ -57,6 +58,7 @@ func TestAddNewTweet(t *testing.T) {
 }
 
 func TestAddAndRetriveTweets(t *testing.T) {
+	time.Sleep(1 * time.Second)
 	ctx := context.Background()
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithInsecure())
 	if err != nil {
@@ -75,6 +77,8 @@ func TestAddAndRetriveTweets(t *testing.T) {
 	if !resp.Success {
 		t.Error("Test Add New Tweet Failed")
 	}
+
+	time.Sleep(1 * time.Second)
 
 	// Retrieve tweets for given user
 	usernames := []string{"test1"}

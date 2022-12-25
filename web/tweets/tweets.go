@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
-	"os/exec"
-	"os"
 	"log"
+	"net/http"
+	"os"
+	"os/exec"
+	"strings"
 
 	"time"
 )
@@ -24,9 +25,6 @@ type Server struct {
 	TweetsServiceServer
 }
 
-// In memory non-persistent storage
-var tweets = make(map[string][]Tweet)
-
 type Configuration struct {
 	RaftClients []string
 }
@@ -36,7 +34,17 @@ var CONFIG Configuration
 
 // Load configuration from external file
 func loadConfiguration() Configuration {
-	file, err1 := os.Open("./tweets/tweet_config.json")
+	path, err3 := os.Getwd()
+	if err3 != nil {
+		log.Println(err3)
+	}
+	var file *os.File
+	var err1 error
+	if strings.HasSuffix(path, "\\tweets") || strings.HasSuffix(path, "/tweets") {
+		file, err1 = os.Open("tweet_config.json")
+	} else {
+		file, err1 = os.Open("./tweets/tweet_config.json")
+	}
 	if err1 != nil {
 		fmt.Print("File reading error")
 		fmt.Print(err1)
@@ -52,7 +60,6 @@ func loadConfiguration() Configuration {
 }
 
 func findWorkingRAFTClient() string {
-	fmt.Print(CONFIG.RaftClients)
 	for _, url := range CONFIG.RaftClients {
 		_, err := http.Get(url + "/ping")
 		if err == nil {
@@ -68,12 +75,13 @@ func init() {
 }
 
 func (s *Server) GetTweetsByUsers(ctx context.Context, in *GetTweetsRequest) (*GetTweetsResponse, error) {
+	var tweets = make(map[string][]Tweet)
 	var texts []string
 	var createdBy []string
 	var timestamps []string
 	raftUrl := findWorkingRAFTClient()
 
-	resp, err := http.Get(raftUrl+"/tweets")
+	resp, err := http.Get(raftUrl + "/tweets")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -96,9 +104,10 @@ func (s *Server) GetTweetsByUsers(ctx context.Context, in *GetTweetsRequest) (*G
 }
 
 func (s *Server) AddNewTweet(ctx context.Context, in *AddTweetRequest) (*AddTweetResponse, error) {
+	var tweets = make(map[string][]Tweet)
 	raftUrl := findWorkingRAFTClient()
 
-	resp, err := http.Get(raftUrl+"/tweets")
+	resp, err := http.Get(raftUrl + "/tweets")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -116,7 +125,7 @@ func (s *Server) AddNewTweet(ctx context.Context, in *AddTweetRequest) (*AddTwee
 	if err != nil {
 		fmt.Println(err)
 	}
-	cmd := exec.Command("curl", "-L", raftUrl+"tweets", "-XPUT", "-d "+string(dataBytes))
+	cmd := exec.Command("curl", "-L", raftUrl+"/tweets", "-XPUT", "-d "+string(dataBytes))
 
 	cmd.Run()
 	return &AddTweetResponse{Success: true}, nil
