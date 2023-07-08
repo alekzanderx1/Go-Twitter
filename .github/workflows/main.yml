@@ -1,0 +1,24 @@
+name: Test on Commit
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.15'
+
+      - name: Setup dependencies
+        run: ./cmd/setup.sh
+
+      - name: Run raft
+        run: ./cmd/run_raft.sh
+        
+      - name: Run tests
+        run: ./cmd/run_tests.sh
